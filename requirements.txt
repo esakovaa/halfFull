@@ -31,6 +31,7 @@ prompt_toolkit==3.0.52
 psutil==7.2.2
 ptyprocess==0.7.0
 pure_eval==0.2.3
+pyarrow
 Pygments==2.19.2
 pyparsing==3.3.2
 pyreadstat==1.3.3
@@ -47,4 +48,3 @@ tornado==6.5.4
 traitlets==5.14.3
 typing_extensions==4.15.0
 wcwidth==0.6.0
-xport==3.6.1
