@@ -64,3 +64,10 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install pandas pyreadstat jupyter ipykernel
 ```
+
+
+# Data
+## NHANES
+
+### Lab Results
+> To download all raw files, run `notebooks/download_data.ipynb`.
