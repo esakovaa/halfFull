@@ -215,3 +215,7 @@ data/raw/
 .AppleDouble
 .LSOverride
 ._*
+
+# Node / Next.js
+node_modules/
+.next/

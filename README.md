@@ -71,3 +71,11 @@ pip install pandas pyreadstat jupyter ipykernel
 
 ### Lab Results
 > To download all raw files, run `notebooks/download_data.ipynb`.
+## Frontend Setup
+
+cd frontend
+npm install
+npm run dev
+
+and then open:
+http://localhost:3000
