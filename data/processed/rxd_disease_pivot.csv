@@ -1,0 +1,252 @@
+,disease_name,n_people,pct_of_med_users
+1,Essential (primary) hypertension,2774,41.8
+2,Pure hypercholesterolemia,1892,28.5
+3,Type 2 diabetes mellitus,1088,16.4
+4,Gastro-esophageal reflux disease,703,10.6
+5,"Anxiety disorder, unspecified",702,10.6
+6,"Major depressive disorder, single episode, unspecified",695,10.5
+7,"Hypothyroidism, unspecified",582,8.8
+8,Asthma,443,6.7
+9,Dorsalgia,399,6.0
+10,"Edema, unspecified",370,5.6
+11,Insomnia,336,5.1
+12,"Neuralgia and neuritis, unspecified",304,4.6
+13,Elevated blood glucose level,297,4.5
+14,Attention-deficit hyperactivity disorders,276,4.2
+15,Functional dyspepsia,270,4.1
+16,Prevent blood clots,239,3.6
+17,Prevent heart attack/myocardial infarction,236,3.6
+18,Long term (current) use of hormonal contraceptives,217,3.3
+19,"Allergy, unspecified",213,3.2
+20,Pain in joint,206,3.1
+21,"Allergic rhinitis, unspecified",203,3.1
+22,Enlarged prostate,198,3.0
+23,"Sleep disorder, unspecified",170,2.6
+24,Myalgia,169,2.5
+25,"Heart failure, unspecified",150,2.3
+26,"Chronic obstructive pulmonary disease, unspecified",147,2.2
+27,Migraine,142,2.1
+28,"Osteoarthritis, unspecified site",138,2.1
+29,"Heart disease, unspecified",136,2.0
+30,Glaucoma,135,2.0
+31,Hypokalemia,134,2.0
+32,"Cardiac arrhythmia, unspecified",131,2.0
+33,Heartburn,124,1.9
+34,"Otitis media, unspecified",119,1.8
+35,Muscle spasm,119,1.8
+36,Epilepsy and recurrent seizures,111,1.7
+37,Cough,108,1.6
+38,Wheezing,107,1.6
+39,"Rheumatoid arthritis, unspecified",107,1.6
+40,Nasal congestion,104,1.6
+41,Unspecified atrial fibrillation and atrial flutter,102,1.5
+42,Unspecified mood [affective] disorder,99,1.5
+43,"Bipolar disorder, unspecified",96,1.4
+44,Unspecified injury,94,1.4
+45,Chronic gout,90,1.4
+46,Other seasonal allergic rhinitis,87,1.3
+47,"Chest pain, unspecified",83,1.2
+48,Unspecified chronic bronchitis,83,1.2
+49,Nausea and vomiting,82,1.2
+50,Osteoporosis without current pathological fracture,80,1.2
+51,"Excessive, frequent and irregular menstruation",80,1.2
+52,"Pain, unspecified",77,1.2
+53,Other symptoms and signs involving cognitive functions and awareness,77,1.2
+54,Abnormalities of heart beat,77,1.2
+55,Acne,77,1.2
+56,Prevent stroke,76,1.1
+57,Restless legs syndrome,75,1.1
+58,Headache,73,1.1
+59,Fibromyalgia,72,1.1
+60,Polyuria,72,1.1
+61,Constipation,70,1.1
+62,Long term (current) use of anticoagulants and antithrombotics/antiplatelets,65,1.0
+63,Other arthritis,62,0.9
+64,"Disorder of thyroid, unspecified",61,0.9
+65,Unspecified abnormalities of breathing,60,0.9
+66,Pure hyperglyceridemia,59,0.9
+67,Overactive bladder,57,0.9
+68,"Atopic dermatitis, unspecified",56,0.8
+69,"Pain in limb, hand, foot, fingers and toes",56,0.8
+70,Prevent high cholesterol,54,0.8
+71,Shortness of breath,51,0.8
+72,Acute pharyngitis,51,0.8
+73,Periapical abscess without sinus,49,0.7
+74,Abdominal and pelvic pain,49,0.7
+75,"Acute sinusitis, unspecified",49,0.7
+76,Menopausal and other perimenopausal disorders,49,0.7
+77,Hormone replacement therapy,49,0.7
+78,Pain and other conditions associated with female genital organs and menstrual cycle,48,0.7
+79,"Local infection of the skin and subcutaneous tissue, unspecified",48,0.7
+80,"Urinary tract infection, site not specified",48,0.7
+81,Overweight and obesity,47,0.7
+82,"Angina pectoris, unspecified",47,0.7
+83,Dizziness and giddiness,45,0.7
+84,Dermatophytosis,45,0.7
+85,Unspecified urinary incontinence,44,0.7
+86,Prevent heart disease,43,0.6
+87,Prevent gout,42,0.6
+88,Influenza due to certain identified influenza viruses,41,0.6
+89,Type 2 diabetes mellitus with neurological complications,40,0.6
+90,Other difficulties with micturition,40,0.6
+91,Prevent bacterial infection,39,0.6
+92,"Major depressive disorder, recurrent, unspecified",39,0.6
+93,Rash and other nonspecific skin eruption,39,0.6
+94,Gastric ulcer,39,0.6
+95,Panic disorder [episodic paroxysmal anxiety] without agoraphobia,39,0.6
+96,Allergic rhinitis due to pollen,37,0.6
+97,Unspecified disorder of circulatory system,37,0.6
+98,Other specified disorders of teeth and supporting structures,36,0.5
+99,Irritable bowel syndrome,36,0.5
+100,Long term (current) drug therapy,35,0.5
+101,Post-traumatic stress disorder (PTSD),35,0.5
+102,"Disorder of kidney and ureter, unspecified",34,0.5
+103,Psoriasis,33,0.5
+104,"Gout, unspecified",32,0.5
+105,"Tremor, unspecified",32,0.5
+106,Prevent diabetes,31,0.5
+107,"Degenerative disease of nervous system, unspecified",31,0.5
+108,"Acute bronchitis, unspecified",31,0.5
+109,Type 2 diabetes mellitus with kidney complications,30,0.5
+110,Unspecified disorder of eye and adnexa,30,0.5
+111,Cerebral infarction,30,0.5
+112,Disorders of lacrimal system,30,0.5
+113,"Disease of stomach and duodenum, unspecified",30,0.5
+114,"Pain, not elsewhere classified",30,0.5
+115,"Bronchitis, not specified as acute or chronic",29,0.4
+116,Prevent diabetic kidney disease,29,0.4
+117,"Disorder of prostate, unspecified",28,0.4
+118,Unspecified symptoms and signs involving the genitourinary system,28,0.4
+119,Prevent breathing difficulty,28,0.4
+120,"Phlebitis and thrombophlebitis of lower extremities, unspecified",27,0.4
+121,Unspecified kidney failure,27,0.4
+122,Unspecified infectious disease,26,0.4
+123,Type 1 diabetes mellitus,26,0.4
+124,"Pneumonia, unspecified organism",25,0.4
+125,"Male erectile dysfunction, unspecified",25,0.4
+126,Malignant neoplasm of breast,24,0.4
+127,"Peptic ulcer, site unspecified",24,0.4
+128,"Respiratory disorder, unspecified",24,0.4
+129,Allergic contact dermatitis,24,0.4
+130,"Disease of digestive system, unspecified",24,0.4
+131,Schizophrenia,24,0.4
+132,Cystitis,23,0.3
+133,Other specified disorders of nervous system in diseases classified elsewhere,23,0.3
+134,Ulcerative colitis,23,0.3
+135,"Pruritus, unspecified",23,0.3
+136,Acute nasopharyngitis [common cold],22,0.3
+137,Prevent transplanted organ and tissue rejection,22,0.3
+138,Symptoms and signs involving emotional state,22,0.3
+139,"Diarrhea, unspecified",22,0.3
+140,ST elevation (STEMI) and non-ST elevation (NSTEMI) myocardial infarction,21,0.3
+141,Parkinson's disease,21,0.3
+142,"Disorder of purine and pyrimidine metabolism, unspecified",21,0.3
+143,Prevent kidney disease,21,0.3
+144,Thyrotoxicosis [hyperthyroidism],21,0.3
+145,Opioid dependence with withdrawal,21,0.3
+146,Human immunodeficiency virus [HIV] disease,21,0.3
+147,Candidiasis,20,0.3
+148,Nicotine dependence,20,0.3
+149,Unspecified psychosis not due to a substance or known physiological condition,20,0.3
+150,Conjunctivitis,20,0.3
+151,Testicular hypofunction,20,0.3
+152,"Disorder of bone density and structure, unspecified",20,0.3
+153,"Mental disorder, not otherwise specified",19,0.3
+154,Symptoms and signs concerning food and fluid intake,19,0.3
+155,"Malignant (primary) neoplasm, unspecified",19,0.3
+156,"Bacterial infection, unspecified",19,0.3
+157,Calculus of kidney,18,0.3
+158,Emphysema,18,0.3
+159,"Acute upper respiratory infection, unspecified",17,0.3
+160,Atherosclerosis,17,0.3
+161,Ovarian dysfunction,17,0.3
+162,Acute atopic conjunctivitis,17,0.3
+163,Long term (current) use of non-steroidal anti-inflammatories (NSAID),17,0.3
+164,"Disorders of gallbladder, biliary tract and pancreas in diseases classified elsewhere",16,0.2
+165,Prevent gastric ulcer,16,0.2
+166,Prevent tooth infection,16,0.2
+167,"Nutritional deficiency, unspecified",16,0.2
+168,Other specified urinary incontinence,16,0.2
+169,Other nontoxic goiter,16,0.2
+170,"Anogenital herpesviral infection, unspecified",15,0.2
+171,Helicobacter pylori [H. pylori] as the cause of diseases classified elsewhere,15,0.2
+172,"Reaction to severe stress, unspecified",14,0.2
+173,Lupus erythematosus,14,0.2
+174,"Disorder of the skin and subcutaneous tissue, unspecified",14,0.2
+175,"Chronic kidney disease, unspecified",14,0.2
+176,Zoster [herpes zoster],14,0.2
+177,Presence of cardiac and vascular implants and grafts,14,0.2
+178,Prevent migraine,14,0.2
+179,Unspecified disorder of ear,14,0.2
+180,"Nonscarring hair loss, unspecified",14,0.2
+181,Rosacea,14,0.2
+182,"Fever, unspecified",13,0.2
+183,Prevent breast cancer,13,0.2
+184,Herpesviral vesicular dermatitis,13,0.2
+185,"Liver disease, unspecified",13,0.2
+186,Malignant neoplasm of prostate,12,0.2
+187,Dental caries,12,0.2
+188,"Anemia, unspecified",12,0.2
+189,Crohn's disease [regional enteritis],12,0.2
+190,Other diseases of esophagus,12,0.2
+191,Other systemic involvement of connective tissue,12,0.2
+192,Prevent drug side effect,12,0.2
+193,Prevent bone loss/osteoporosis,11,0.2
+194,"Viral infection, unspecified",11,0.2
+195,Prevent hypertension,11,0.2
+196,Cramp and spasm,11,0.2
+197,"Bladder disorder, unspecified",10,0.2
+198,"Acquired absence of organs, not elsewhere classified",10,0.2
+199,"Alzheimer's disease, unspecified",10,0.2
+200,Streptococcal pharyngitis,10,0.2
+201,Conduct disorders,10,0.2
+202,Otitis externa,9,0.1
+203,"Pulmonary heart disease, unspecified",9,0.1
+204,Other specified symptoms and signs involving the circulatory and respiratory systems,9,0.1
+205,Malaise and fatigue,9,0.1
+206,"Joint disorder, unspecified",9,0.1
+207,Prevent asthma,8,0.1
+208,Abnormal sputum,8,0.1
+209,"Herpesviral infection, unspecified",8,0.1
+210,Urticaria,8,0.1
+211,Pervasive developmental disorders,8,0.1
+212,"Periodontal disease, unspecified",8,0.1
+213,Thyroiditis,8,0.1
+214,Prevent hypokalemia,7,0.1
+215,Other symptoms and signs involving the circulatory and respiratory system,7,0.1
+216,Unspecified abdominal hernia,7,0.1
+217,"Chronic ischemic heart disease, unspecified",7,0.1
+218,Neoplasm of unspecified behavior of unspecified site,7,0.1
+219,Obsessive-compulsive disorder,6,0.1
+220,Disorders of phosphorus metabolism and phosphatases,6,0.1
+221,"Disorder involving the immune mechanism, unspecified",6,0.1
+222,Flatulence and related conditions,6,0.1
+223,Other postprocedural states,6,0.1
+224,Disturbances of skin sensation,6,0.1
+225,Prevent atherosclerosis,6,0.1
+226,Presence of other functional implants,6,0.1
+227,Unspecified cataract,5,0.1
+228,Partial loss of teeth,5,0.1
+229,Diverticular disease of intestine,5,0.1
+230,"Disorder of adrenal gland, unspecified",5,0.1
+231,Prevent nausea or vomiting,5,0.1
+232,"Endocrine disorder, unspecified",5,0.1
+233,"Dermatitis, unspecified",5,0.1
+234,Unspecified viral hepatitis,5,0.1
+235,Prevent urinary tract infection,5,0.1
+236,Type 2 diabetes mellitus with unspecified complications,4,0.1
+237,Pulmonary embolism,4,0.1
+238,Acute tonsillitis,4,0.1
+239,Prevent liver disease,4,0.1
+240,Abnormal involuntary movements,4,0.1
+241,Prevent viral infection,4,0.1
+242,"Synovitis and tenosynovitis, unspecified",4,0.1
+243,Unspecified hemorrhoids,3,0.0
+244,Encounter for other specified postprocedural aftercare,3,0.0
+245,Prevent ear infection,3,0.0
+246,Prevent cancer,3,0.0
+247,Unspecified disorder of nose and nasal sinuses,3,0.0
+248,Type 1 diabetes mellitus with neurological complications,1,0.0
+249,Prevent ovarian problem,1,0.0
+250,Prevent prostate cancer,1,0.0
+251,Prevent flu,1,0.0
