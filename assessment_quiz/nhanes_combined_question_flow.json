@@ -1,0 +1,571 @@
+{
+  "metadata": {
+    "name": "NHANES Combined Disease Question Flow",
+    "version": "1.0.0",
+    "generated_on": "2026-03-17",
+    "source_dataset": "/Users/annaesakova/aipm/halfFull/data/processed/nhanes_merged_adults_final.csv",
+    "purpose": "Merged non-lab question flow covering the model features supplied by the user, with shared prompts combined wherever practical.",
+    "conditions_covered": [
+      "Menopause",
+      "Thyroid problems",
+      "Kidney problems",
+      "Sleep disorder",
+      "Anemia",
+      "Liver / hepatic insufficiency",
+      "Prediabetes",
+      "Hidden inflammation",
+      "Electrolyte deficiency / imbalance",
+      "Hepatitis B & C"
+    ]
+  },
+  "design_notes": [
+    "This flow intentionally focuses on questionnaire, demographic, and history items. Lab-only features are excluded from user prompts and listed separately under derived_or_lab_features.",
+    "Grouped multi-select questions are used where several binary clinician-diagnosed conditions can be asked once and then split back to NHANES-coded features.",
+    "Engineered time features such as sin/cos sleep encodings and social jetlag are derived downstream from bedtime and wake-time questions."
+  ],
+  "derived_or_lab_features": [
+    "sbp_mean",
+    "dbp_mean",
+    "pulse_mean",
+    "med_count",
+    "iron_deficiency",
+    "fatigue_ordinal",
+    "cos_weekday_wake",
+    "sin_weekday_wake",
+    "sin_weekday_bedtime",
+    "social_jetlag",
+    "fasting_glucose_mg_dl",
+    "hdl_cholesterol_mg_dl",
+    "triglycerides_mg_dl",
+    "serum_creatinine_mg_dl",
+    "alt_u_l",
+    "ast_u_l",
+    "ggt_u_l",
+    "alp_u_l",
+    "total_bilirubin_mg_dl",
+    "serum_albumin_g_dl",
+    "ferritin_ng_ml",
+    "LBXHSCRP_hs_c_reactive_protein_mg_l"
+  ],
+  "question_groups": [
+    {
+      "id": "demographics",
+      "title": "Core profile",
+      "questions": [
+        {
+          "id": "q_age",
+          "text": "What is your age?",
+          "type": "number",
+          "maps_to": [
+            "age_years"
+          ],
+          "conditions": [
+            "all"
+          ]
+        },
+        {
+          "id": "q_gender",
+          "text": "What sex were you assigned at birth?",
+          "type": "single_select",
+          "options": [
+            "Female",
+            "Male"
+          ],
+          "maps_to": [
+            "gender"
+          ],
+          "conditions": [
+            "all"
+          ]
+        },
+        {
+          "id": "q_body_size",
+          "text": "Enter your current height, weight, and waist size if known.",
+          "type": "grouped_numeric",
+          "maps_to": [
+            "height_cm",
+            "weight_kg",
+            "bmi",
+            "waist_cm"
+          ],
+          "conditions": [
+            "menopause",
+            "thyroid",
+            "kidney",
+            "liver",
+            "hidden_inflammation",
+            "hepatitis_bc"
+          ]
+        },
+        {
+          "id": "q_demographics_context",
+          "text": "What is your race/ethnicity, education level, country of birth, and household income-to-poverty ratio if known?",
+          "type": "grouped_demographic",
+          "maps_to": [
+            "ethnicity",
+            "education",
+            "country_of_birth",
+            "income_poverty_ratio"
+          ],
+          "conditions": [
+            "hepatitis_bc"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "known_conditions",
+      "title": "Known clinician-diagnosed conditions",
+      "questions": [
+        {
+          "id": "q_known_dx",
+          "text": "Which of these have you ever been told by a doctor or health professional that you have or had?",
+          "type": "multi_select",
+          "options": [
+            {
+              "label": "High blood pressure",
+              "maps_to": "bpq020___ever_told_you_had_high_blood_pressure"
+            },
+            {
+              "label": "High cholesterol",
+              "maps_to": "bpq080___doctor_told_you___high_cholesterol_level"
+            },
+            {
+              "label": "Diabetes",
+              "maps_to": "diq010___doctor_told_you_have_diabetes"
+            },
+            {
+              "label": "Weak or failing kidneys",
+              "maps_to": "kiq022___ever_told_you_had_weak/failing_kidneys?"
+            },
+            {
+              "label": "Kidney stones",
+              "maps_to": "kiq026___ever_had_kidney_stones?"
+            },
+            {
+              "label": "Arthritis",
+              "maps_to": "mcq160a___ever_told_you_had_arthritis"
+            },
+            {
+              "label": "Heart failure",
+              "maps_to": "mcq160b___ever_told_you_had_congestive_heart_failure"
+            },
+            {
+              "label": "Heart attack",
+              "maps_to": "mcq160e___ever_told_you_had_heart_attack"
+            },
+            {
+              "label": "Stroke",
+              "maps_to": "mcq160f___ever_told_you_had_stroke"
+            },
+            {
+              "label": "Asthma",
+              "maps_to": "mcq010___ever_been_told_you_have_asthma"
+            },
+            {
+              "label": "COPD / emphysema / chronic bronchitis",
+              "maps_to": "mcq160p___ever_told_you_had_copd_emphysema"
+            },
+            {
+              "label": "Liver condition",
+              "maps_to": "mcq160l___ever_told_you_had_any_liver_condition"
+            }
+          ],
+          "conditions": [
+            "thyroid",
+            "kidney",
+            "sleep_disorder",
+            "liver",
+            "prediabetes",
+            "hidden_inflammation",
+            "electrolytes",
+            "hepatitis_bc"
+          ]
+        },
+        {
+          "id": "q_medications",
+          "text": "Are you currently taking medicines for high blood pressure, diabetes, anemia, hepatitis, or any prescription medicines at all?",
+          "type": "multi_select_with_count",
+          "options": [
+            {
+              "label": "Blood pressure prescription",
+              "maps_to": "bpq040a___taking_prescription_for_hypertension"
+            },
+            {
+              "label": "Insulin",
+              "maps_to": "diq050___taking_insulin_now"
+            },
+            {
+              "label": "Diabetes pills",
+              "maps_to": "diq070___take_diabetic_pills_to_lower_blood_sugar"
+            },
+            {
+              "label": "Anemia treatment",
+              "maps_to": "mcq053___taking_treatment_for_anemia/past_3_mos"
+            },
+            {
+              "label": "Any prescription medicine in past month",
+              "maps_to": "rxduse___taken_prescription_medicine,_past_month"
+            }
+          ],
+          "derives": [
+            "med_count"
+          ],
+          "conditions": [
+            "menopause",
+            "thyroid",
+            "kidney",
+            "anemia",
+            "liver",
+            "electrolytes"
+          ]
+        },
+        {
+          "id": "q_general_health",
+          "text": "How would you rate your general health, and were you hospitalized overnight in the last year?",
+          "type": "grouped_single_select",
+          "maps_to": [
+            "huq010___general_health_condition",
+            "huq071___overnight_hospital_patient_in_last_year"
+          ],
+          "conditions": [
+            "thyroid",
+            "kidney",
+            "anemia",
+            "liver",
+            "hidden_inflammation",
+            "hepatitis_bc"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sleep_fatigue",
+      "title": "Sleep and fatigue",
+      "questions": [
+        {
+          "id": "q_sleep_quality",
+          "text": "How often do you snore, and has a doctor ever told you that you had trouble sleeping?",
+          "type": "grouped_single_select",
+          "maps_to": [
+            "slq030___how_often_do_you_snore?",
+            "slq050___ever_told_doctor_had_trouble_sleeping?"
+          ],
+          "conditions": [
+            "thyroid",
+            "sleep_disorder",
+            "prediabetes",
+            "hidden_inflammation"
+          ]
+        },
+        {
+          "id": "q_fatigue",
+          "text": "Over the last two weeks, how often have you felt tired or had little energy?",
+          "type": "single_select",
+          "maps_to": [
+            "dpq040___feeling_tired_or_having_little_energy",
+            "fatigue_ordinal"
+          ],
+          "conditions": [
+            "kidney",
+            "sleep_disorder",
+            "anemia",
+            "prediabetes",
+            "electrolytes"
+          ]
+        },
+        {
+          "id": "q_sleep_schedule",
+          "text": "What time do you usually go to sleep and wake up on workdays and on weekends, and how many hours do you usually sleep?",
+          "type": "grouped_time_and_duration",
+          "maps_to": [
+            "slq300___usual_sleep_time_on_weekdays_or_workdays",
+            "slq310___usual_wake_time_on_weekdays_or_workdays",
+            "sld012___sleep_hours___weekdays_or_workdays",
+            "slq320___usual_sleep_time_on_weekends",
+            "slq330___usual_wake_time_on_weekends",
+            "sld013___sleep_hours___weekends"
+          ],
+          "derives": [
+            "cos_weekday_wake",
+            "sin_weekday_wake",
+            "sin_weekday_bedtime",
+            "social_jetlag"
+          ],
+          "conditions": [
+            "thyroid",
+            "sleep_disorder",
+            "prediabetes",
+            "hidden_inflammation"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "urinary_kidney",
+      "title": "Urinary and kidney symptoms",
+      "questions": [
+        {
+          "id": "q_urinary_leakage",
+          "text": "Do you have urinary leakage, and if yes does it happen with physical activity or before reaching the toilet?",
+          "type": "grouped_branching",
+          "maps_to": [
+            "kiq005___how_often_have_urinary_leakage?",
+            "kiq042___leak_urine_during_physical_activities?",
+            "kiq430___how_frequently_does_this_occur?",
+            "kiq044___urinated_before_reaching_the_toilet?",
+            "kiq450___how_frequently_does_this_occur?"
+          ],
+          "conditions": [
+            "menopause",
+            "kidney",
+            "anemia",
+            "prediabetes"
+          ]
+        },
+        {
+          "id": "q_nocturia",
+          "text": "How many times do you usually urinate during the night?",
+          "type": "number",
+          "maps_to": [
+            "kiq480___how_many_times_urinate_in_night?"
+          ],
+          "conditions": [
+            "thyroid",
+            "kidney",
+            "prediabetes",
+            "electrolytes"
+          ]
+        },
+        {
+          "id": "q_kidney_history",
+          "text": "Have you ever been told you had weak or failing kidneys, received dialysis, or had kidney stones?",
+          "type": "multi_select",
+          "options": [
+            {
+              "label": "Weak or failing kidneys",
+              "maps_to": "kiq022___ever_told_you_had_weak/failing_kidneys?"
+            },
+            {
+              "label": "Kidney stones",
+              "maps_to": "kiq026___ever_had_kidney_stones?"
+            }
+          ],
+          "conditions": [
+            "kidney",
+            "electrolytes",
+            "hepatitis_bc"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cardiorespiratory_pain",
+      "title": "Breathing and pain symptoms",
+      "questions": [
+        {
+          "id": "q_breathing",
+          "text": "Do you get shortness of breath when walking up stairs or inclines?",
+          "type": "single_select",
+          "maps_to": [
+            "cdq010___shortness_of_breath_on_stairs/inclines"
+          ],
+          "conditions": [
+            "sleep_disorder",
+            "anemia",
+            "liver"
+          ]
+        },
+        {
+          "id": "q_pain",
+          "text": "Have you had chest pain or abdominal pain in the past year, and have you seen a doctor about it?",
+          "type": "grouped_branching",
+          "maps_to": [
+            "cdq001___sp_ever_had_pain_or_discomfort_in_chest",
+            "mcq520___abdominal_pain_during_past_12_months?",
+            "mcq540___ever_seen_a_dr_about_this_pain"
+          ],
+          "conditions": [
+            "anemia",
+            "liver"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "female_reproductive",
+      "title": "Female reproductive and menopause context",
+      "questions": [
+        {
+          "id": "q_repro_status",
+          "text": "Are you currently pregnant or have you ever been pregnant?",
+          "type": "grouped_single_select",
+          "maps_to": [
+            "pregnancy_status",
+            "rhq131___ever_been_pregnant?"
+          ],
+          "conditions": [
+            "menopause",
+            "thyroid"
+          ],
+          "show_if": {
+            "gender": [
+              "Female"
+            ]
+          }
+        },
+        {
+          "id": "q_periods",
+          "text": "Have you had regular menstrual periods in the past 12 months?",
+          "type": "single_select",
+          "maps_to": [
+            "rhq031___had_regular_periods_in_past_12_months"
+          ],
+          "conditions": [
+            "liver",
+            "hidden_inflammation"
+          ],
+          "show_if": {
+            "gender": [
+              "Female"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "lifestyle",
+      "title": "Lifestyle and activity",
+      "questions": [
+        {
+          "id": "q_activity",
+          "text": "Which of these do you do: vigorous work activity, vigorous recreational activity, moderate recreational activity, or moderate work activity? How many days per week?",
+          "type": "grouped_activity",
+          "maps_to": [
+            "paq605___vigorous_work_activity",
+            "paq625___number_of_days_moderate_work",
+            "paq650___vigorous_recreational_activities",
+            "paq665___moderate_recreational_activities",
+            "paq670___days_moderate_recreational_activities"
+          ],
+          "conditions": [
+            "menopause",
+            "thyroid",
+            "kidney",
+            "sleep_disorder",
+            "prediabetes",
+            "hidden_inflammation",
+            "electrolytes"
+          ]
+        },
+        {
+          "id": "q_alcohol",
+          "text": "How many alcoholic drinks do you usually have per day, and how often do you have 4 or 5 or more drinks on one occasion?",
+          "type": "grouped_numeric",
+          "maps_to": [
+            "alq130___avg_#_alcoholic_drinks/day___past_12_mos",
+            "alq151___ever_have_4/5_or_more_drinks_every_day?",
+            "alq170___past_30_days_#_times_4_5_drinks_on_an_oc"
+          ],
+          "derives": [
+            "ever_heavy_drinker"
+          ],
+          "conditions": [
+            "thyroid",
+            "sleep_disorder",
+            "prediabetes",
+            "hidden_inflammation",
+            "liver",
+            "hepatitis_bc"
+          ]
+        },
+        {
+          "id": "q_smoking",
+          "text": "Do you smoke now, have you smoked at least 100 cigarettes in your life, and how many cigarettes per day do you smoke?",
+          "type": "grouped_numeric",
+          "maps_to": [
+            "smq020___smoked_at_least_100_cigarettes_in_life",
+            "smq040___do_you_now_smoke_cigarettes?",
+            "smd650___avg_#_cigarettes/day_during_past_30_days"
+          ],
+          "conditions": [
+            "thyroid",
+            "hidden_inflammation",
+            "hepatitis_bc"
+          ]
+        },
+        {
+          "id": "q_work_schedule",
+          "text": "What is your overall work schedule, what kind of work did you do last week, and how many hours did you work?",
+          "type": "grouped_work",
+          "maps_to": [
+            "ocq670___overall_work_schedule_past_3_months",
+            "ocd150___type_of_work_done_last_week",
+            "ocq180___hours_worked_last_week_in_total_all_jobs"
+          ],
+          "conditions": [
+            "thyroid",
+            "anemia",
+            "liver",
+            "hidden_inflammation"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "weight_family_history",
+      "title": "Weight and family history",
+      "questions": [
+        {
+          "id": "q_weight_context",
+          "text": "Has a doctor ever told you that you were overweight, would you like to weigh more or less, and have you tried to lose weight in the past year?",
+          "type": "grouped_single_select",
+          "maps_to": [
+            "mcq080___doctor_ever_said_you_were_overweight",
+            "whq040___like_to_weigh_more,_less_or_same",
+            "whq070___tried_to_lose_weight_in_past_year"
+          ],
+          "conditions": [
+            "thyroid",
+            "kidney",
+            "liver",
+            "prediabetes",
+            "hidden_inflammation"
+          ]
+        },
+        {
+          "id": "q_family_history",
+          "text": "Do you have a close relative with diabetes?",
+          "type": "single_select",
+          "maps_to": [
+            "mcq300c___close_relative_had_diabetes"
+          ],
+          "conditions": [
+            "prediabetes"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "exposures",
+      "title": "Exposure and treatment history",
+      "questions": [
+        {
+          "id": "q_transfusion",
+          "text": "Have you ever received a blood transfusion, and if yes what year was it?",
+          "type": "grouped_branching",
+          "maps_to": [
+            "mcq092___ever_receive_blood_transfusion",
+            "mcd093___year_receive_blood_transfusion"
+          ],
+          "conditions": [
+            "kidney",
+            "anemia",
+            "liver",
+            "hepatitis_bc"
+          ]
+        }
+      ]
+    }
+  ]
+}
