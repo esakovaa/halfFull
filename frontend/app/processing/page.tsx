@@ -6,11 +6,12 @@ import { useAssessment } from '@/src/hooks/useAssessment';
 import {
   fetchDeepAnalysis,
   fetchMedGemmaInsights,
-  fetchMLScores,
   storeDeepResult,
   storeMedGemmaResult,
-  storeMLScores,
   readStoredDeepResult,
+  readStoredBayesianScores,
+  readStoredBayesianAnswers,
+  readStoredMLScores,
 } from '@/src/lib/medgemma';
 import { BlobCharacter } from '@/src/components/ui/BlobCharacter';
 
@@ -49,19 +50,17 @@ export default function ProcessingPage() {
     let cancelled = false;
 
     const run = async () => {
-      try {
-        // Run ML scoring and deep analysis in parallel (ML scores feed into the deep analysis prompt)
-        let mlScores: Record<string, number> | undefined;
-        try {
-          mlScores = await fetchMLScores(answers);
-          storeMLScores(mlScores);
-        } catch {
-          // ML scoring is best-effort — proceed without it if it fails
-        }
+      // Scores come from Bayesian layer (clarify page) or fall back to raw ML scores
+      const mlScores: Record<string, number> | undefined =
+        readStoredBayesianScores() ?? readStoredMLScores() ?? undefined;
 
+      // Clarification Q&A from Bayesian layer — may be null if clarify was skipped
+      const clarificationQA = readStoredBayesianAnswers() ?? undefined;
+
+      try {
         // Primary: deep analysis (comprehensive report with doctor kit + coaching tips)
         const [result] = await Promise.all([
-          fetchDeepAnalysis(answers, mlScores),
+          fetchDeepAnalysis(answers, mlScores, clarificationQA),
           new Promise((resolve) => window.setTimeout(resolve, 2600)),
         ]);
 

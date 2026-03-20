@@ -42,7 +42,7 @@ export default function AssessmentPage() {
 
   const handleNext = () => {
     if (isLast) {
-      router.push('/processing');
+      router.push('/clarify');
     } else {
       goNext();
     }

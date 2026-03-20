@@ -1,0 +1,1542 @@
+{
+  "meta": {
+    "version": "0.1.0",
+    "description": "Likelihood ratio tables for Bayesian posterior update layer. Each question answer carries an LR that updates the ML prior via: posterior_odds = prior_odds \u00d7 LR(answer).",
+    "trigger_threshold": 0.4,
+    "max_questions_per_condition": 5,
+    "posterior_clip": [
+      0.05,
+      0.95
+    ],
+    "independence_warning": "Na\u00efve Bayes assumed. Do not select two correlated questions for the same condition (e.g. nocturnal choking/gasping + snoring are partially redundant for sleep_disorder; use the highest-LR question only).",
+    "source_forms": [
+      "FDDA Questionnaire English (Vifor Pharma)"
+    ],
+    "confidence_levels": {
+      "high": "LR from meta-analysis or multi-centre validation study",
+      "medium": "LR from single well-designed study or derived from published sensitivity/specificity",
+      "low": "LR estimated from epidemiological data or expert consensus \u2014 treat as placeholder, verify before release"
+    },
+    "conditions_covered": [
+      "anemia",
+      "iron_deficiency",
+      "thyroid",
+      "kidney",
+      "sleep_disorder",
+      "liver",
+      "prediabetes",
+      "inflammation",
+      "electrolytes",
+      "hepatitis",
+      "perimenopause"
+    ],
+    "confounders_covered": [
+      "depression",
+      "anxiety"
+    ]
+  },
+  "confounders": {
+    "_note": "Confounder questions are asked first. A high depression or anxiety score reduces the posterior probability of ALL physical conditions by a global multiplier (see bayesian_updater.py). Screen confounders before condition-specific questions.",
+    "depression": {
+      "instrument": "PHQ-2",
+      "questions": [
+        {
+          "id": "phq2_q1",
+          "fdda_section": "D",
+          "fdda_question": true,
+          "text": "Over the last two weeks, how often have you had little interest or pleasure in doing things?",
+          "answer_type": "ordinal",
+          "answer_options": [
+            {
+              "value": 0,
+              "label": "Not at all"
+            },
+            {
+              "value": 1,
+              "label": "On some days"
+            },
+            {
+              "value": 2,
+              "label": "On more than half the days"
+            },
+            {
+              "value": 3,
+              "label": "Almost every day"
+            }
+          ]
+        },
+        {
+          "id": "phq2_q2",
+          "fdda_section": "D",
+          "fdda_question": true,
+          "text": "Over the last two weeks, how often have you felt down, depressed or hopeless?",
+          "answer_type": "ordinal",
+          "answer_options": [
+            {
+              "value": 0,
+              "label": "Not at all"
+            },
+            {
+              "value": 1,
+              "label": "On some days"
+            },
+            {
+              "value": 2,
+              "label": "On more than half the days"
+            },
+            {
+              "value": 3,
+              "label": "Almost every day"
+            }
+          ]
+        }
+      ],
+      "scoring": {
+        "rule": "sum phq2_q1 + phq2_q2",
+        "thresholds": [
+          {
+            "score_range": [
+              3,
+              6
+            ],
+            "label": "positive",
+            "lr_physical_conditions": 0.45,
+            "lr_note": "PHQ-2 \u22653 positive screen. Depression is a strong alternative explanation for fatigue; downgrades physical condition priors.",
+            "lr_source": "Kroenke K et al., Med Care. 2003;41(11):1284-92. Sensitivity 83%, Specificity 90% for MDD \u2192 LR+ 8.3, LR- 0.19.",
+            "lr_confidence": "high"
+          },
+          {
+            "score_range": [
+              1,
+              2
+            ],
+            "label": "subthreshold",
+            "lr_physical_conditions": 0.8,
+            "lr_note": "Mild depressive symptoms. Modest downgrade to physical condition priors.",
+            "lr_confidence": "medium"
+          },
+          {
+            "score_range": [
+              0,
+              0
+            ],
+            "label": "negative",
+            "lr_physical_conditions": 1.2,
+            "lr_note": "Depression screened out \u2014 slight upward adjustment to physical conditions.",
+            "lr_source": "Kroenke K et al., Med Care. 2003. LR- 0.19 for MDD.",
+            "lr_confidence": "high"
+          }
+        ]
+      }
+    },
+    "anxiety": {
+      "instrument": "GAD-2",
+      "questions": [
+        {
+          "id": "gad2_q1",
+          "fdda_section": "D",
+          "fdda_question": true,
+          "text": "Over the last two weeks, how often have you felt nervous, anxious or on edge?",
+          "answer_type": "ordinal",
+          "answer_options": [
+            {
+              "value": 0,
+              "label": "Not at all"
+            },
+            {
+              "value": 1,
+              "label": "On some days"
+            },
+            {
+              "value": 2,
+              "label": "On more than half the days"
+            },
+            {
+              "value": 3,
+              "label": "Almost every day"
+            }
+          ]
+        },
+        {
+          "id": "gad2_q2",
+          "fdda_section": "D",
+          "fdda_question": true,
+          "text": "Over the last two weeks, how often have you not been able to stop or control worrying?",
+          "answer_type": "ordinal",
+          "answer_options": [
+            {
+              "value": 0,
+              "label": "Not at all"
+            },
+            {
+              "value": 1,
+              "label": "On some days"
+            },
+            {
+              "value": 2,
+              "label": "On more than half the days"
+            },
+            {
+              "value": 3,
+              "label": "Almost every day"
+            }
+          ]
+        }
+      ],
+      "scoring": {
+        "rule": "sum gad2_q1 + gad2_q2",
+        "thresholds": [
+          {
+            "score_range": [
+              3,
+              6
+            ],
+            "label": "positive",
+            "lr_physical_conditions": 0.55,
+            "lr_note": "GAD-2 \u22653 positive screen. Anxiety is an independent cause of fatigue; downgrades physical condition priors.",
+            "lr_source": "Kroenke K et al., Ann Intern Med. 2007;146(5):317-25. Sensitivity 86%, Specificity 83% for GAD \u2192 LR+ 5.1, LR- 0.17.",
+            "lr_confidence": "high"
+          },
+          {
+            "score_range": [
+              1,
+              2
+            ],
+            "label": "subthreshold",
+            "lr_physical_conditions": 0.85,
+            "lr_confidence": "medium"
+          },
+          {
+            "score_range": [
+              0,
+              0
+            ],
+            "label": "negative",
+            "lr_physical_conditions": 1.15,
+            "lr_confidence": "medium"
+          }
+        ]
+      }
+    }
+  },
+  "conditions": {
+    "anemia": {
+      "trigger_threshold": 0.4,
+      "questions": [
+        {
+          "id": "anemia_q1",
+          "fdda_section": "E",
+          "fdda_question": true,
+          "text": "Do you have heavy periods lasting more than 7 days, with at least 3 days being heavy or very heavy?",
+          "gender_filter": "female",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 2.4,
+              "lr_source": "Fraser IS et al., Fertil Steril. 2011. Prevalence of HMB in women \u2014 epidemiological framing, LR+ 2.4 not independently confirmed as diagnostic-accuracy value for anemia. Low confidence.",
+              "lr_confidence": "low"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.53,
+              "lr_confidence": "medium"
+            }
+          ]
+        },
+        {
+          "id": "anemia_q2",
+          "fdda_section": "E",
+          "fdda_question": true,
+          "text": "Have you noticed any unusual blood loss \u2014 for example in your urine, stools, nosebleeds, or elsewhere?",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 3.5,
+              "lr_source": "Goddard AF et al., Gut. 2011. Overt GI blood loss sensitivity ~30%, specificity ~91% for significant anemia. Conservative estimate for self-report.",
+              "lr_confidence": "medium"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.74,
+              "lr_confidence": "medium"
+            }
+          ]
+        },
+        {
+          "id": "anemia_q3",
+          "fdda_section": "E",
+          "fdda_question": true,
+          "text": "Have you donated blood in the last 12 months?",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 2.0,
+              "lr_source": "Cable RG et al., Transfusion. 2011. Regular donors have ~3\u00d7 higher rate of iron depletion leading to anemia.",
+              "lr_confidence": "medium"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.85,
+              "lr_confidence": "low"
+            }
+          ]
+        },
+        {
+          "id": "anemia_q4",
+          "fdda_section": "C",
+          "fdda_question": true,
+          "text": "Are you vegetarian or vegan?",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 1.8,
+              "lr_source": "Pawlak R et al., Nutr Rev. 2013. Vegetarians have ~2\u00d7 higher prevalence of iron deficiency anemia. Discounted for anemia vs iron deficiency.",
+              "lr_confidence": "medium"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.88,
+              "lr_confidence": "low"
+            }
+          ]
+        },
+        {
+          "id": "anemia_q5",
+          "fdda_section": "A",
+          "fdda_question": true,
+          "text": "For how long have you been experiencing this tiredness every day?",
+          "answer_type": "categorical",
+          "answer_options": [
+            {
+              "value": "lt_4w",
+              "label": "Less than 4 weeks",
+              "lr": 0.75,
+              "lr_note": "Acute onset less typical for anemia (which is often gradual).",
+              "lr_confidence": "low"
+            },
+            {
+              "value": "4_12w",
+              "label": "4\u201312 weeks",
+              "lr": 1.1,
+              "lr_confidence": "low"
+            },
+            {
+              "value": "12w_6m",
+              "label": "More than 12 weeks up to 6 months",
+              "lr": 1.3,
+              "lr_confidence": "low"
+            },
+            {
+              "value": "gt_6m",
+              "label": "More than 6 months",
+              "lr": 1.2,
+              "lr_confidence": "low"
+            }
+          ]
+        }
+      ]
+    },
+    "iron_deficiency": {
+      "trigger_threshold": 0.4,
+      "questions": [
+        {
+          "id": "iron_q1",
+          "fdda_section": "E",
+          "fdda_question": true,
+          "text": "Do you have heavy periods lasting more than 7 days, with at least 3 days being heavy or very heavy?",
+          "gender_filter": "female",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 3.5,
+              "lr_source": "Munro MG et al., Int J Gynaecol Obstet. 2011. HMB is the leading cause of iron deficiency in premenopausal women. Higher LR here than for anemia as iron deficiency precedes anemia.",
+              "lr_confidence": "medium"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.5,
+              "lr_confidence": "medium"
+            }
+          ]
+        },
+        {
+          "id": "iron_q2",
+          "fdda_section": "C",
+          "fdda_question": true,
+          "text": "Are you vegetarian or vegan?",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 2.5,
+              "lr_source": "Pawlak R et al., Nutr Rev. 2013. Pooled prevalence of iron deficiency ~40% in vegetarians vs ~16% in omnivores.",
+              "lr_confidence": "medium"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.75,
+              "lr_confidence": "medium"
+            }
+          ]
+        },
+        {
+          "id": "iron_q3",
+          "fdda_section": "E",
+          "fdda_question": true,
+          "text": "Have you noticed any unusual blood loss \u2014 for example in your urine, stools, nosebleeds, or elsewhere?",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 4.0,
+              "lr_source": "Goddard AF et al., Gut. 2011. Higher LR than for anemia \u2014 blood loss is the most direct cause of iron deficiency.",
+              "lr_confidence": "medium"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.72,
+              "lr_confidence": "medium"
+            }
+          ]
+        },
+        {
+          "id": "iron_q4",
+          "fdda_section": "E",
+          "fdda_question": true,
+          "text": "Have you donated blood in the last 12 months?",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 2.5,
+              "lr_source": "Cable RG et al., Transfusion. 2011. Iron depletion in donors well-documented; stronger signal for iron deficiency than for frank anemia.",
+              "lr_confidence": "medium"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.83,
+              "lr_confidence": "low"
+            }
+          ]
+        },
+        {
+          "id": "iron_q5",
+          "fdda_section": null,
+          "fdda_question": false,
+          "text": "Do you ever have strong cravings to chew ice, raw starch, dirt, or other non-food substances?",
+          "answer_type": "binary",
+          "supplementary_note": "Pica/pagophagia \u2014 not in FDDA but highly specific for iron deficiency. Add to follow-up question set.",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 5.8,
+              "lr_source": "Kettaneh A et al., Am J Med. 2005. Pagophagia (ice craving) and pica association with iron deficiency \u2014 source confirmed in PubMed, but full-text LR+ not independently reproduced. Medium confidence.",
+              "lr_confidence": "medium"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.62,
+              "lr_confidence": "medium"
+            }
+          ]
+        }
+      ]
+    },
+    "thyroid": {
+      "trigger_threshold": 0.4,
+      "questions": [
+        {
+          "id": "thyroid_q1",
+          "fdda_section": "C",
+          "fdda_question": true,
+          "text": "Have you lost or gained more than 5% of your body weight in the last 3 months?",
+          "answer_type": "categorical",
+          "answer_options": [
+            {
+              "value": "gained",
+              "label": "Yes \u2014 gained weight",
+              "lr": 1.6,
+              "lr_source": "Koulouri O et al. Clin Endocrinol. 2013 (subclinical hypothyroid signs dataset). Weight increase LR+ 1.62 (<60y) and 1.29 (\u226560y). Older Zulewski 1997 estimate of 3.0 is not supported by more recent evidence.",
+              "lr_confidence": "low"
+            },
+            {
+              "value": "lost",
+              "label": "Yes \u2014 lost weight",
+              "lr": 0.5,
+              "lr_note": "Weight loss argues against hypothyroidism; may suggest hyperthyroidism or another condition.",
+              "lr_confidence": "medium"
+            },
+            {
+              "value": "no",
+              "label": "No significant change",
+              "lr": 0.7,
+              "lr_confidence": "medium"
+            }
+          ]
+        },
+        {
+          "id": "thyroid_q2",
+          "fdda_section": null,
+          "fdda_question": false,
+          "text": "Do you often feel cold when others around you do not?",
+          "supplementary_note": "Cold intolerance \u2014 not in FDDA but strong hypothyroid indicator from Zulewski scoring.",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 3.5,
+              "lr_source": "Zulewski H et al., J Clin Endocrinol Metab. 1997. Cold intolerance LR+3.5 cited; exact value not independently confirmed from accessible full text \u2014 treat as medium confidence.",
+              "lr_confidence": "medium"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.65,
+              "lr_confidence": "medium"
+            }
+          ]
+        },
+        {
+          "id": "thyroid_q3",
+          "fdda_section": null,
+          "fdda_question": false,
+          "text": "Have you noticed your skin becoming drier, or your hair becoming coarser or falling out more than usual?",
+          "supplementary_note": "Dry skin + hair changes composite \u2014 not in FDDA, commonly used in thyroid scoring.",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 5.0,
+              "lr_source": "Koulouri O et al. Clin Endocrinol. 2013. Coarse skin LR+ 10.0 (<60y) and 5.0 (\u226560y). Table uses age-averaged lower bound 5.0 as conservative estimate; higher in younger patients.",
+              "lr_confidence": "medium"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.75,
+              "lr_confidence": "medium"
+            }
+          ]
+        },
+        {
+          "id": "thyroid_q4",
+          "fdda_section": null,
+          "fdda_question": false,
+          "text": "Have you been constipated more than usual (fewer than 3 bowel movements per week)?",
+          "supplementary_note": "Constipation \u2014 not in FDDA, part of standard hypothyroid symptom screens.",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 2.0,
+              "lr_source": "Zulewski H et al., J Clin Endocrinol Metab. 1997. Constipation sensitivity 48%, specificity 76%.",
+              "lr_confidence": "high"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.8,
+              "lr_confidence": "medium"
+            }
+          ]
+        },
+        {
+          "id": "thyroid_q5",
+          "fdda_section": "A",
+          "fdda_question": true,
+          "text": "For how long have you been experiencing this tiredness every day?",
+          "answer_type": "categorical",
+          "answer_options": [
+            {
+              "value": "lt_4w",
+              "label": "Less than 4 weeks",
+              "lr": 0.6,
+              "lr_note": "Hypothyroidism typically causes gradual onset fatigue. Acute onset argues against it.",
+              "lr_confidence": "low"
+            },
+            {
+              "value": "4_12w",
+              "label": "4\u201312 weeks",
+              "lr": 1.0,
+              "lr_confidence": "low"
+            },
+            {
+              "value": "12w_6m",
+              "label": "More than 12 weeks up to 6 months",
+              "lr": 1.5,
+              "lr_confidence": "low"
+            },
+            {
+              "value": "gt_6m",
+              "label": "More than 6 months",
+              "lr": 1.4,
+              "lr_confidence": "low"
+            }
+          ]
+        }
+      ]
+    },
+    "kidney": {
+      "trigger_threshold": 0.4,
+      "questions": [
+        {
+          "id": "kidney_q1",
+          "fdda_section": "E",
+          "fdda_question": true,
+          "text": "Have you noticed blood in your urine, or has your urine appeared dark, foamy, or brown?",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 4.0,
+              "lr_source": "Grossfeld GD et al., Am Fam Physician. 2001. Policy paper on asymptomatic microscopic hematuria \u2014 not a formal diagnostic-accuracy study. LR+ is a clinical estimate; treat as low confidence.",
+              "lr_confidence": "low"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.75,
+              "lr_confidence": "medium"
+            }
+          ]
+        },
+        {
+          "id": "kidney_q2",
+          "fdda_section": null,
+          "fdda_question": false,
+          "text": "Have you noticed any swelling in your ankles, feet, or around your eyes, particularly in the morning?",
+          "supplementary_note": "Edema \u2014 classic CKD symptom not covered by FDDA.",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 3.5,
+              "lr_source": "O'Callaghan CA, The Renal System at a Glance. Clinical estimate only. No primary diagnostic-accuracy study for edema \u2192 CKD LR confirmed from accessible evidence.",
+              "lr_confidence": "low"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.72,
+              "lr_confidence": "low"
+            }
+          ]
+        },
+        {
+          "id": "kidney_q3",
+          "fdda_section": null,
+          "fdda_question": false,
+          "text": "Do you wake up at night to urinate, and has this become more frequent recently?",
+          "supplementary_note": "Nocturia \u2014 important early CKD symptom, also used in sleep disorder screening but different mechanism.",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 2.0,
+              "lr_source": "Clinical estimate. Nocturia is non-specific but relevant in context of elevated kidney ML prior.",
+              "lr_confidence": "low"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.85,
+              "lr_confidence": "low"
+            }
+          ]
+        },
+        {
+          "id": "kidney_q4",
+          "fdda_section": "C",
+          "fdda_question": true,
+          "text": "Have you lost or gained more than 5% of your body weight in the last 3 months without trying?",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes_loss",
+              "label": "Yes \u2014 lost weight unintentionally",
+              "lr": 2.5,
+              "lr_note": "Unintentional weight loss is a flag for advanced kidney disease. LR estimate only.",
+              "lr_confidence": "low"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.88,
+              "lr_confidence": "low"
+            }
+          ]
+        }
+      ]
+    },
+    "sleep_disorder": {
+      "trigger_threshold": 0.4,
+      "questions": [
+        {
+          "id": "sleep_q1",
+          "fdda_section": "C",
+          "fdda_question": true,
+          "text": "Do you wake up at night choking, gasping for air, or feeling like you cannot breathe?",
+          "supplementary_note": "Rephrased from 'witnessed apnea' to nocturnal choking/gasping \u2014 the JAMA RCE identifies this as the most useful self-reported symptom for OSA. Witnessed apnea requires a bed partner; this question captures the patient-reported equivalent.",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 3.3,
+              "lr_source": "Joosten SA et al., JAMA. 2016 (Rational Clinical Examination). Nocturnal choking or gasping: summary LR+ 3.3 (95% CI 2.1\u20134.6) at AHI \u226510/h threshold. Most useful single symptom for OSA diagnosis.",
+              "lr_confidence": "high"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.71,
+              "lr_confidence": "medium"
+            }
+          ]
+        },
+        {
+          "id": "sleep_q2",
+          "fdda_section": "C",
+          "fdda_question": true,
+          "text": "Do you snore loudly (loud enough to be heard through a closed door)?",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 1.1,
+              "lr_source": "Joosten SA et al., JAMA. 2016 (Rational Clinical Examination). Snoring summary LR+ 1.1 (95% CI 1.0\u20131.1). Snoring is common in OSA but not diagnostically useful alone. Prior estimate of 1.8 was overstated.",
+              "lr_confidence": "high"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.6,
+              "lr_confidence": "medium"
+            }
+          ]
+        },
+        {
+          "id": "sleep_q3",
+          "fdda_section": "C",
+          "fdda_question": true,
+          "text": "Do you fall asleep involuntarily during the day \u2014 for example while driving, watching TV, or in a meeting?",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 2.3,
+              "lr_source": "Johns MW, Sleep. 1991. Epworth Sleepiness Scale background. Involuntary daytime sleep is a reliable marker of pathological hypersomnolence.",
+              "lr_confidence": "medium"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.68,
+              "lr_confidence": "medium"
+            }
+          ]
+        },
+        {
+          "id": "sleep_q4",
+          "fdda_section": "C",
+          "fdda_question": true,
+          "text": "Even when you sleep for a full night, do you wake up feeling unrefreshed or as tired as when you went to bed?",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 1.6,
+              "lr_source": "Clinical estimate. Non-restorative sleep is a defining feature of sleep disorders including OSA and insomnia disorder.",
+              "lr_confidence": "medium"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.75,
+              "lr_confidence": "low"
+            }
+          ]
+        },
+        {
+          "id": "sleep_q5",
+          "fdda_section": "C",
+          "fdda_question": true,
+          "text": "Do you have difficulty falling or staying asleep at least 3 nights per week?",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 2.0,
+              "lr_source": "Morin CM et al., Lancet. 2012. Insomnia diagnosis criterion: difficulty 3+ nights/week. Sensitivity ~70%, Specificity ~65% for insomnia disorder.",
+              "lr_confidence": "medium"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.55,
+              "lr_confidence": "medium"
+            }
+          ]
+        }
+      ]
+    },
+    "liver": {
+      "trigger_threshold": 0.4,
+      "_scope_note": "The ML liver model detects general hepatic dysfunction (elevated ALAT pattern). Questions below include both general liver disease markers and cirrhosis-specific signs (spider nevi, ascites) from JAMA RCE meta-analysis. LRs for spider nevi and ascites are validated for cirrhosis specifically \u2014 they are most relevant when the ML prior is high (\u22650.50).",
+      "questions": [
+        {
+          "id": "liver_q1",
+          "fdda_section": "C",
+          "fdda_question": true,
+          "text": "How many standard alcoholic drinks do you have per week? (1 drink = 1 glass of wine, 1 bottle of beer, or 1 shot of spirits)",
+          "answer_type": "categorical",
+          "answer_options": [
+            {
+              "value": "high_risk",
+              "label": "More than 14 per week (men) or more than 7 per week (women)",
+              "lr": 4.5,
+              "lr_source": "O'Shea RS et al., Hepatology. 2010. AASLD guideline. Heavy alcohol use is primary risk for alcoholic liver disease; LR+ estimate, not from formal diagnostic-accuracy study.",
+              "lr_confidence": "low"
+            },
+            {
+              "value": "moderate",
+              "label": "7\u201314 per week (men) or 3\u20137 per week (women)",
+              "lr": 2.0,
+              "lr_confidence": "medium"
+            },
+            {
+              "value": "low",
+              "label": "Fewer than 7 (men) or fewer than 3 (women) per week",
+              "lr": 0.65,
+              "lr_confidence": "medium"
+            },
+            {
+              "value": "none",
+              "label": "I don't drink",
+              "lr": 0.35,
+              "lr_note": "Absence of alcohol strongly argues against alcoholic liver disease; shifts differential toward viral or metabolic causes.",
+              "lr_confidence": "medium"
+            }
+          ]
+        },
+        {
+          "id": "liver_q2",
+          "fdda_section": null,
+          "fdda_question": false,
+          "text": "Have you noticed small red spider-like marks on your skin, especially on your chest, shoulders, or face?",
+          "supplementary_note": "Spider nevi \u2014 physical sign of cirrhosis. Self-reported but identifiable by patients; ask only when ML prior \u22650.50.",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 4.3,
+              "lr_source": "Udell JA et al., JAMA. 2012 (Rational Clinical Examination: Does This Patient Have Cirrhosis?). Spider nevi LR+ 4.3 (95% CI 2.4\u20136.2) in meta-analysis of 86 studies, 19,533 patients.",
+              "lr_confidence": "high"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.75,
+              "lr_source": "Udell JA et al., JAMA. 2012.",
+              "lr_confidence": "high"
+            }
+          ]
+        },
+        {
+          "id": "liver_q3",
+          "fdda_section": null,
+          "fdda_question": false,
+          "text": "Has your abdomen become noticeably swollen or distended, or have you been told you have fluid in your belly?",
+          "supplementary_note": "Ascites \u2014 strongest self-reportable cirrhosis sign from JAMA RCE. Ask only when ML prior \u22650.50.",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 7.2,
+              "lr_source": "Udell JA et al., JAMA. 2012 (Rational Clinical Examination: Does This Patient Have Cirrhosis?). Ascites LR+ 7.2 (95% CI 2.9\u201312) \u2014 most informative single physical finding for cirrhosis.",
+              "lr_confidence": "high"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.37,
+              "lr_source": "Udell JA et al., JAMA. 2012. Absence of hepatomegaly LR- 0.37 (95% CI 0.24\u20130.51); ascites absence is similar.",
+              "lr_confidence": "high"
+            }
+          ]
+        },
+        {
+          "id": "liver_q4",
+          "fdda_section": null,
+          "fdda_question": false,
+          "text": "Have you noticed any yellowing of your skin or the whites of your eyes?",
+          "supplementary_note": "Jaundice \u2014 clinically relevant for both hepatitis and cirrhosis.",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 3.8,
+              "lr_source": "Udell JA et al., JAMA. 2012 (Rational Clinical Examination: Does This Patient Have Cirrhosis?). Jaundice LR+ 3.8 (95% CI 2.0\u20137.2).",
+              "lr_confidence": "high"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.65,
+              "lr_note": "Many liver disease cases are anicteric \u2014 absence of jaundice does not rule out liver pathology.",
+              "lr_confidence": "medium",
+              "lr_source": "Udell JAMA 2012."
+            }
+          ],
+          "lr_confidence": "high"
+        },
+        {
+          "id": "liver_q5",
+          "fdda_section": "C",
+          "fdda_question": true,
+          "text": "Have you lost weight unintentionally \u2014 more than 5% of your body weight in the last 3 months?",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 2.5,
+              "lr_source": "Clinical estimate. Unintentional weight loss is a feature of decompensated liver disease.",
+              "lr_confidence": "low"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.82,
+              "lr_confidence": "low"
+            }
+          ]
+        }
+      ]
+    },
+    "prediabetes": {
+      "trigger_threshold": 0.4,
+      "questions": [
+        {
+          "id": "prediabetes_q1",
+          "fdda_section": "C",
+          "fdda_question": true,
+          "text": "Have you gained more than 5% of your body weight in the last 3 months?",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 2.0,
+              "lr_source": "Clinical estimate. Recent weight gain is a known risk factor for insulin resistance. LR modest and non-specific.",
+              "lr_confidence": "low"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.8,
+              "lr_confidence": "low"
+            }
+          ]
+        },
+        {
+          "id": "prediabetes_q2",
+          "fdda_section": null,
+          "fdda_question": false,
+          "text": "Do you feel unusually thirsty most days, even when you have had enough to drink?",
+          "supplementary_note": "Polydipsia \u2014 classic hyperglycaemia symptom. Not in FDDA.",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 3.0,
+              "lr_source": "Manley SE et al., Diabet Med. 2000. Polydipsia sensitivity cited but full-text LR not independently reproduced. Clinical estimate; treat as low confidence.",
+              "lr_confidence": "low"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.73,
+              "lr_confidence": "medium"
+            }
+          ]
+        },
+        {
+          "id": "prediabetes_q3",
+          "fdda_section": null,
+          "fdda_question": false,
+          "text": "Do you urinate more frequently than usual, including waking at night to urinate?",
+          "supplementary_note": "Polyuria \u2014 not in FDDA.",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 2.5,
+              "lr_source": "Gregg EW et al., Ann Intern Med. 2001. Polyuria sensitivity ~48%, specificity ~80% for undiagnosed diabetes.",
+              "lr_confidence": "medium"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.78,
+              "lr_confidence": "medium"
+            }
+          ]
+        },
+        {
+          "id": "prediabetes_q4",
+          "fdda_section": "C",
+          "fdda_question": true,
+          "text": "Overall, how would you describe your level of physical activity?",
+          "answer_type": "categorical",
+          "answer_options": [
+            {
+              "value": "none",
+              "label": "I don't exercise at all",
+              "lr": 1.8,
+              "lr_note": "Sedentary lifestyle is the primary modifiable risk factor for prediabetes.",
+              "lr_confidence": "low"
+            },
+            {
+              "value": "moderate",
+              "label": "Moderately (e.g. walk less than 2.5 hours/week)",
+              "lr": 1.0,
+              "lr_confidence": "low"
+            },
+            {
+              "value": "intensive",
+              "label": "Intensively (more than 1 hour of vigorous sport/day)",
+              "lr": 0.6,
+              "lr_confidence": "low"
+            }
+          ]
+        }
+      ]
+    },
+    "inflammation": {
+      "trigger_threshold": 0.4,
+      "questions": [
+        {
+          "id": "inflam_q1",
+          "fdda_section": "C",
+          "fdda_question": true,
+          "text": "Have you lost more than 5% of your body weight in the last 3 months without trying?",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 3.5,
+              "lr_source": "Unexplained weight loss as marker of systemic inflammation \u2014 clinical consensus, no primary diagnostic-accuracy study LR confirmed from accessible evidence.",
+              "lr_confidence": "low"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.7,
+              "lr_confidence": "medium"
+            }
+          ]
+        },
+        {
+          "id": "inflam_q2",
+          "fdda_section": null,
+          "fdda_question": false,
+          "text": "Have you had a fever, persistent sore throat, or an infection in the last 6 weeks?",
+          "supplementary_note": "Recent infection \u2014 important acute inflammation trigger. Not in FDDA.",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 3.0,
+              "lr_note": "Post-infectious fatigue and active infection are the most common causes of elevated CRP. Clinical estimate.",
+              "lr_confidence": "low",
+              "lr_source": "Clinical estimate. No primary diagnostic-accuracy LR source identified for 'recent infection/fever \u2192 CRP elevation' as symptom question."
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.55,
+              "lr_confidence": "low"
+            }
+          ]
+        },
+        {
+          "id": "inflam_q3",
+          "fdda_section": null,
+          "fdda_question": false,
+          "text": "Do you have pain, swelling, or stiffness in your joints, especially in the morning?",
+          "supplementary_note": "Joint symptoms \u2014 key differentiator for autoimmune/rheumatic inflammation.",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 2.5,
+              "lr_source": "Aletaha D et al., Arthritis Rheum. 2010. Morning stiffness + joint swelling is a core ACR criterion for rheumatoid arthritis and other systemic inflammatory conditions.",
+              "lr_confidence": "medium"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.75,
+              "lr_confidence": "medium"
+            }
+          ]
+        },
+        {
+          "id": "inflam_q4",
+          "fdda_section": "A",
+          "fdda_question": true,
+          "text": "For how long have you been experiencing this tiredness every day?",
+          "answer_type": "categorical",
+          "answer_options": [
+            {
+              "value": "lt_4w",
+              "label": "Less than 4 weeks",
+              "lr": 2.0,
+              "lr_note": "Acute-onset fatigue is more consistent with active infection or acute inflammatory episode.",
+              "lr_confidence": "low"
+            },
+            {
+              "value": "4_12w",
+              "label": "4\u201312 weeks",
+              "lr": 1.5,
+              "lr_confidence": "low"
+            },
+            {
+              "value": "12w_6m",
+              "label": "More than 12 weeks up to 6 months",
+              "lr": 1.0,
+              "lr_confidence": "low"
+            },
+            {
+              "value": "gt_6m",
+              "label": "More than 6 months",
+              "lr": 0.8,
+              "lr_note": "Chronic fatigue >6 months is less typical for simple acute inflammation.",
+              "lr_confidence": "low"
+            }
+          ]
+        }
+      ]
+    },
+    "electrolytes": {
+      "trigger_threshold": 0.4,
+      "questions": [
+        {
+          "id": "elec_q1",
+          "fdda_section": "C",
+          "fdda_question": true,
+          "text": "How many standard alcoholic drinks do you have per week?",
+          "answer_type": "categorical",
+          "answer_options": [
+            {
+              "value": "high_risk",
+              "label": "More than 14 per week (men) or more than 7 per week (women)",
+              "lr": 3.0,
+              "lr_source": "Clinical guideline estimate. Heavy alcohol use causes hypomagnesaemia, hypokalaemia. Fallon MB et al., Hepatology 1992.",
+              "lr_confidence": "medium"
+            },
+            {
+              "value": "moderate",
+              "label": "3\u201314 per week",
+              "lr": 1.5,
+              "lr_confidence": "low"
+            },
+            {
+              "value": "low_none",
+              "label": "Fewer than 3 per week or none",
+              "lr": 0.75,
+              "lr_confidence": "low"
+            }
+          ]
+        },
+        {
+          "id": "elec_q2",
+          "fdda_section": null,
+          "fdda_question": false,
+          "text": "Have you had prolonged vomiting or diarrhoea (more than 2 days) in the past 2 weeks?",
+          "supplementary_note": "GI fluid loss \u2014 primary cause of acute electrolyte disturbance. Not in FDDA.",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 3.5,
+              "lr_note": "Acute GI losses are the leading cause of clinically significant hyponatraemia/hypokalaemia. Clinical estimate.",
+              "lr_confidence": "low",
+              "lr_source": "Clinical estimate. GI fluid loss as electrolyte risk \u2014 physiologically supported but LR+ 3.5 not sourced from a formal diagnostic-accuracy study in accessible evidence."
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.75,
+              "lr_confidence": "low"
+            }
+          ]
+        },
+        {
+          "id": "elec_q3",
+          "fdda_section": null,
+          "fdda_question": false,
+          "text": "Do you regularly experience muscle cramps, muscle weakness, or muscle twitching?",
+          "supplementary_note": "Muscle symptoms of electrolyte imbalance \u2014 not in FDDA.",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 2.0,
+              "lr_source": "Gennari FJ, N Engl J Med. 1998. Muscle cramps/weakness is a clinical marker of hypokalaemia and hypomagnesaemia. LR is modest given non-specificity.",
+              "lr_confidence": "low"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.8,
+              "lr_confidence": "low"
+            }
+          ]
+        },
+        {
+          "id": "elec_q4",
+          "fdda_section": "C",
+          "fdda_question": true,
+          "text": "Do you take any medications regularly? If yes, do they include diuretics (water pills), laxatives, or antacids?",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes \u2014 taking diuretics, laxatives, or antacids",
+              "lr": 3.0,
+              "lr_source": "Rastegar A et al., NEJM. 2001. Diuretics are the most common cause of electrolyte imbalance \u2014 this is a review, not a diagnostic-accuracy study. LR+ is a clinical estimate.",
+              "lr_confidence": "low"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.78,
+              "lr_confidence": "low"
+            }
+          ]
+        }
+      ]
+    },
+    "hepatitis": {
+      "trigger_threshold": 0.4,
+      "questions": [
+        {
+          "id": "hep_q1",
+          "fdda_section": "C",
+          "fdda_question": true,
+          "text": "How many standard alcoholic drinks do you have per week?",
+          "answer_type": "categorical",
+          "answer_options": [
+            {
+              "value": "high_risk",
+              "label": "More than 14 per week (men) or more than 7 per week (women)",
+              "lr": 3.5,
+              "lr_source": "O'Shea RS et al., Hepatology. 2010. Heavy alcohol is the primary cause of alcoholic hepatitis.",
+              "lr_confidence": "high"
+            },
+            {
+              "value": "moderate",
+              "label": "3\u201314 per week",
+              "lr": 1.3,
+              "lr_confidence": "medium"
+            },
+            {
+              "value": "low_none",
+              "label": "Fewer than 3 per week or none",
+              "lr": 0.5,
+              "lr_note": "Non-drinkers are much more likely to have viral hepatitis as the cause if the ML prior is elevated.",
+              "lr_confidence": "medium"
+            }
+          ]
+        },
+        {
+          "id": "hep_q2",
+          "fdda_section": null,
+          "fdda_question": false,
+          "text": "Have you noticed any yellowing of your skin or the whites of your eyes?",
+          "supplementary_note": "Jaundice \u2014 highly specific for hepatic disease.",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 8.0,
+              "lr_source": "Pratt DS et al., cited in Rational Clinical Examination series. Jaundice LR+ 8.0 not independently confirmed from accessible primary text; may conflate hepatitis and other causes. Low confidence.",
+              "lr_confidence": "low"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.55,
+              "lr_note": "Absence of jaundice does not rule out hepatitis \u2014 many cases are anicteric.",
+              "lr_confidence": "medium"
+            }
+          ]
+        },
+        {
+          "id": "hep_q3",
+          "fdda_section": null,
+          "fdda_question": false,
+          "text": "Have you had any of the following in the past: a blood transfusion before 1992, tattooing or piercing with shared equipment, or intravenous drug use?",
+          "supplementary_note": "Hepatitis C risk factors \u2014 not in FDDA but critical for viral hepatitis differential.",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes to any of the above",
+              "lr": 4.5,
+              "lr_source": "Alter MJ, NEJM. 1999. HCV risk factors paper \u2014 describes exposure prevalence, not a formal symptom LR diagnostic-accuracy study. LR+ 4.5 is a clinical estimate.",
+              "lr_confidence": "low"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.55,
+              "lr_confidence": "medium"
+            }
+          ]
+        },
+        {
+          "id": "hep_q4",
+          "fdda_section": "C",
+          "fdda_question": true,
+          "text": "Have you lost weight unintentionally in the last 3 months?",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 2.5,
+              "lr_note": "Unintentional weight loss is a feature of advanced hepatic disease or active viral hepatitis.",
+              "lr_confidence": "low"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.83,
+              "lr_confidence": "low"
+            }
+          ]
+        }
+      ]
+    },
+    "perimenopause": {
+      "trigger_threshold": 0.4,
+      "questions": [
+        {
+          "id": "peri_q1",
+          "fdda_section": null,
+          "fdda_question": false,
+          "text": "Do you think you might be going through the menopause transition or perimenopause?",
+          "gender_filter": "female",
+          "supplementary_note": "Self-assessment of perimenopausal status \u2014 best single negative predictor per JAMA RCE meta-analysis.",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes, I think I might be",
+              "lr": 1.83,
+              "lr_source": "Politi MC et al., JAMA. 2008 (Rational Clinical Examination). Self-assessment LR+ range 1.53\u20132.13 across studies; midpoint used.",
+              "lr_confidence": "high"
+            },
+            {
+              "value": "no",
+              "label": "No, I don't think so",
+              "lr": 0.27,
+              "lr_source": "Politi MC et al., JAMA. 2008. Self-assessment LR- range 0.18\u20130.36; most informative negative predictor in the review.",
+              "lr_confidence": "high"
+            }
+          ]
+        },
+        {
+          "id": "peri_q2",
+          "fdda_section": null,
+          "fdda_question": false,
+          "text": "Do you experience hot flushes \u2014 sudden feelings of intense heat in your face, neck, or chest?",
+          "gender_filter": "female",
+          "supplementary_note": "Hot flushes \u2014 defining vasomotor symptom. LR corrected downward from initial estimate using JAMA meta-analysis.",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 3.1,
+              "lr_source": "Politi MC et al., JAMA. 2008 (Rational Clinical Examination). Hot flash LR+ range 2.15\u20134.06 across studies; midpoint 3.1 used. Prior estimate of 7.0 was unsupported.",
+              "lr_confidence": "high"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.5,
+              "lr_confidence": "medium"
+            }
+          ]
+        },
+        {
+          "id": "peri_q2b",
+          "fdda_section": null,
+          "fdda_question": false,
+          "text": "Do you wake up at night drenched in sweat, even when your bedroom is not hot?",
+          "gender_filter": "female",
+          "supplementary_note": "Night sweats \u2014 LR corrected from 4.5 to 1.90 using JAMA meta-analysis data.",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 1.9,
+              "lr_source": "Politi MC et al., JAMA. 2008 (Rational Clinical Examination). Night sweats LR+ 1.90 (95% CI 1.63\u20132.21). Prior estimate of 4.5 was not meta-analysis-derived.",
+              "lr_confidence": "high"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.6,
+              "lr_confidence": "medium"
+            }
+          ]
+        },
+        {
+          "id": "peri_q2c",
+          "fdda_section": null,
+          "fdda_question": false,
+          "text": "Have you noticed vaginal dryness or discomfort during sex that is new or getting worse?",
+          "gender_filter": "female",
+          "supplementary_note": "Vaginal dryness \u2014 genitourinary symptom of menopause (GSM). From JAMA RCE.",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 2.6,
+              "lr_source": "Politi MC et al., JAMA. 2008 (Rational Clinical Examination). Vaginal dryness LR+ range 1.48\u20133.79; midpoint 2.6 used.",
+              "lr_confidence": "high"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.65,
+              "lr_confidence": "medium"
+            }
+          ]
+        },
+        {
+          "id": "peri_q3",
+          "fdda_section": null,
+          "fdda_question": false,
+          "text": "Have your menstrual cycles become irregular \u2014 either shorter, longer, or skipping months?",
+          "gender_filter": "female",
+          "supplementary_note": "Cycle irregularity \u2014 not in FDDA.",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 3.5,
+              "lr_source": "Harlow SD et al., J Clin Endocrinol Metab. 2012. STRAW+10 staging criteria. Cycle irregularity \u22657 days: strong marker of early menopausal transition.",
+              "lr_confidence": "high"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.45,
+              "lr_confidence": "medium"
+            }
+          ]
+        },
+        {
+          "id": "peri_q4",
+          "fdda_section": "E",
+          "fdda_question": true,
+          "text": "Do you have heavy periods lasting more than 7 days, with at least 3 days being heavy or very heavy?",
+          "gender_filter": "female",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 2.0,
+              "lr_source": "Harlow SD et al., J Clin Endocrinol Metab. 2012. Heavy or irregular bleeding is common in late perimenopause due to anovulatory cycles.",
+              "lr_confidence": "medium"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.75,
+              "lr_confidence": "medium"
+            }
+          ]
+        },
+        {
+          "id": "peri_q5",
+          "fdda_section": null,
+          "fdda_question": false,
+          "text": "Have you noticed changes in your mood, such as increased irritability, anxiety, or low mood, particularly linked to your cycle?",
+          "gender_filter": "female",
+          "supplementary_note": "Mood/cognitive changes \u2014 common perimenopause symptom but overlaps with depression confounder. Weight carefully.",
+          "answer_type": "binary",
+          "answer_options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "lr": 2.2,
+              "lr_source": "Freeman EW et al., Arch Gen Psychiatry. 2006. Mood symptoms sensitivity ~55%, specificity ~75% in perimenopause vs premenopause.",
+              "lr_confidence": "medium"
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "lr": 0.72,
+              "lr_confidence": "medium"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
