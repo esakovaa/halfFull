@@ -58,9 +58,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'HF_API_TOKEN is not configured.' }, { status: 500 });
   }
 
+  interface ClarificationQAPair { group: string; question: string; answer: string; }
+
   const body = await req.json();
   const answers: Record<string, unknown> = body.answers ?? {};
   const mlScores: Record<string, number> | undefined = body.mlScores;
+  const clarificationQA: ClarificationQAPair[] | undefined = body.clarificationQA;
 
   const symptomsText = formatAnswersV2(answers);
 
@@ -75,13 +78,20 @@ export async function POST(req: NextRequest) {
         .join('\n')
     : '- None';
 
+  const clarificationText = clarificationQA && clarificationQA.length > 0
+    ? clarificationQA
+        .map((qa) => `- [${qa.group}] ${qa.question} → ${qa.answer}`)
+        .join('\n')
+    : null;
+
   const prompt = `You are a medical AI generating a personalised fatigue report. Reference the patient's actual symptoms — never give generic advice.
 
 PATIENT DATA:
 ${symptomsText}
 
-TOP-3 FLAGGED CONDITIONS (ML model, P ≥ ${ML_THRESHOLD * 100}%):
+TOP-3 FLAGGED CONDITIONS (posterior probabilities after Bayesian update):
 ${flaggedAreasText}
+${clarificationText ? `\nCLARIFICATION ANSWERS (patient answered these follow-up questions — treat as confirmed findings):\n${clarificationText}` : ''}
 
 Respond with valid JSON only — no markdown, no preamble:
 {
@@ -155,7 +165,7 @@ Rules:
         { status: 500 }
       );
     }
-    writeLog('deep_analyze', { answers, mlScores, topConditions, result: parsed });
+    writeLog('deep_analyze', { answers, mlScores, clarificationQA, topConditions, result: parsed });
     return NextResponse.json(parsed);
   } catch (err) {
     writeLog('deep_analyze_error', { answers, mlScores, error: String(err) });
