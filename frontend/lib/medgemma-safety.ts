@@ -76,16 +76,20 @@ export function validateDeepAnalyzeSchema(
   if (typeof parsed.doctorKitSummary !== 'string' || !parsed.doctorKitSummary.trim())
     return err('doctorKitSummary must be a non-empty string');
 
-  // doctorKitQuestions — exactly 2 non-empty strings
-  if (!Array.isArray(parsed.doctorKitQuestions) || parsed.doctorKitQuestions.length !== 2)
+  // doctorKitQuestions — 1 to 3 non-empty strings
+  if (
+    !Array.isArray(parsed.doctorKitQuestions) ||
+    parsed.doctorKitQuestions.length < 1 ||
+    parsed.doctorKitQuestions.length > 3
+  )
     return err(
-      `doctorKitQuestions must have exactly 2 items (got ${
+      `doctorKitQuestions must have between 1 and 3 items (got ${
         Array.isArray(parsed.doctorKitQuestions)
           ? parsed.doctorKitQuestions.length
           : typeof parsed.doctorKitQuestions
       })`,
     );
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < parsed.doctorKitQuestions.length; i++) {
     if (
       typeof parsed.doctorKitQuestions[i] !== 'string' ||
       !(parsed.doctorKitQuestions[i] as string).trim()
@@ -93,16 +97,20 @@ export function validateDeepAnalyzeSchema(
       return err(`doctorKitQuestions[${i}] must be a non-empty string`);
   }
 
-  // doctorKitArguments — exactly 2 non-empty strings
-  if (!Array.isArray(parsed.doctorKitArguments) || parsed.doctorKitArguments.length !== 2)
+  // doctorKitArguments — 1 to 3 non-empty strings
+  if (
+    !Array.isArray(parsed.doctorKitArguments) ||
+    parsed.doctorKitArguments.length < 1 ||
+    parsed.doctorKitArguments.length > 3
+  )
     return err(
-      `doctorKitArguments must have exactly 2 items (got ${
+      `doctorKitArguments must have between 1 and 3 items (got ${
         Array.isArray(parsed.doctorKitArguments)
           ? parsed.doctorKitArguments.length
           : typeof parsed.doctorKitArguments
       })`,
     );
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < parsed.doctorKitArguments.length; i++) {
     if (
       typeof parsed.doctorKitArguments[i] !== 'string' ||
       !(parsed.doctorKitArguments[i] as string).trim()
