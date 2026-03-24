@@ -70,7 +70,7 @@ _ROOT = _DIR.parent
 MODEL_REGISTRY = {
     "anemia":                "anemia_lr_deduped36_L2_v2.joblib",
     "electrolyte_imbalance": "electrolyte_imbalance_lr_deduped28_L2_v2.joblib",
-    "kidney":                "kidney_lr_deduped34_L2_v2.joblib",
+    "kidney":                "kidney_lr_deduped17_L2_v2.joblib",
     "liver":                 "liver_rf_cal_deduped19_v2.joblib",
     "prediabetes":           "prediabetes_lr_deduped34_L2_C001_v2.joblib",
     "sleep_disorder":        "sleep_disorder_lr_trimmed29_L2_v2.joblib",
@@ -86,7 +86,7 @@ MODEL_REGISTRY = {
 RECOMMENDED_THRESHOLDS = {
     "anemia":                0.35,
     "electrolyte_imbalance": 0.60,
-    "kidney":                0.50,
+    "kidney":                0.66,
     "liver":                 0.10,
     "prediabetes":           0.53,
     "sleep_disorder":        0.35,
@@ -144,6 +144,46 @@ _EDU_ORDER = {
     "High school / GED":        2,
     "Some college / AA":        3,
     "College graduate or above": 4,
+}
+
+# ── Quiz field-id aliases ────────────────────────────────────────────────────
+# The assessment quiz (nhanes_combined_question_flow_v2.json) was updated in
+# v2.1.0 to use the full NHANES column names as field_ids for these lab values.
+# This map provides backward compatibility for frontends still sending the old
+# human-readable names, and is applied BEFORE normalization.
+QUIZ_FIELD_ALIASES: dict[str, str] = {
+    # old quiz name                   →  model / normalizer column name
+    "ldl_cholesterol_mg_dl":           "LBDLDL_ldl_cholesterol_friedewald_mg_dl",
+    "total_protein_g_dl":              "LBXSTP_total_protein_g_dl",
+    "wbc_1000_cells_ul":               "LBXWBCSI_white_blood_cell_count_1000_cells_ul",
+    # dbp_mean / sbp_mean removed from quiz — kept here so stale submissions
+    # are silently dropped rather than passed through to the normalizer
+    "dbp_mean":                        None,
+    "sbp_mean":                        None,
+    "glucose_mg_dl":                   None,
+    "bpq040a___taking_prescription_for_hypertension": None,
+    "mcq040___had_asthma_attack_in_past_year":        None,
+    "paq605___vigorous_work_activity":                None,
+    "alq170_helper_times_4_5_drinks_one_occasion_30d": None,
+}
+
+# NHANES numeric gender codes → canonical text labels used by _add_derived_columns
+_GENDER_CODES: dict[int, str] = {1: "Male", 2: "Female"}
+
+# NHANES numeric education codes → canonical text labels
+_EDU_CODES: dict[int, str] = {
+    1: "Less than 9th grade",
+    2: "9-11th grade",
+    3: "High school / GED",
+    4: "Some college / AA",
+    5: "College graduate or above",
+}
+
+# NHANES pregnancy_status numeric codes → canonical text labels
+_PREGNANCY_CODES: dict[int, str] = {
+    1: "Yes, pregnant",
+    2: "No, not pregnant",
+    3: "Not sure",
 }
 
 
@@ -280,8 +320,30 @@ class InputNormalizer:
             Missing features are filled with NaN (the model's internal
             SimpleImputer handles these at inference time).
         """
-        # Step 1 — single-row DataFrame
-        df = pd.DataFrame([{k: v for k, v in raw_inputs.items()}])
+        # Step 1 — single-row DataFrame, applying quiz field aliases first
+        resolved: dict[str, Any] = {}
+        for k, v in raw_inputs.items():
+            if k in QUIZ_FIELD_ALIASES:
+                target = QUIZ_FIELD_ALIASES[k]
+                if target is None:
+                    log.debug("Dropping deprecated quiz field '%s'", k)
+                    continue           # silently drop removed fields
+                log.debug("Remapping quiz field '%s' → '%s'", k, target)
+                resolved[target] = v
+            else:
+                resolved[k] = v
+
+        # Decode NHANES numeric codes to text labels expected by _add_derived_columns
+        if "gender" in resolved and isinstance(resolved["gender"], (int, float)):
+            resolved["gender"] = _GENDER_CODES.get(int(resolved["gender"]), resolved["gender"])
+        if "education" in resolved and isinstance(resolved["education"], (int, float)):
+            resolved["education"] = _EDU_CODES.get(int(resolved["education"]), resolved["education"])
+        if "pregnancy_status" in resolved and isinstance(resolved["pregnancy_status"], (int, float)):
+            resolved["pregnancy_status"] = _PREGNANCY_CODES.get(
+                int(resolved["pregnancy_status"]), resolved["pregnancy_status"]
+            )
+
+        df = pd.DataFrame([resolved])
 
         # Step 2 — sentinel cleanup
         df = self._apply_sentinels(df)

@@ -1,0 +1,56 @@
+{
+  "model": "kidney_lr_deduped17_L2_v2.joblib",
+  "version": "v2",
+  "condition": "kidney",
+  "target_definition": "Doctor-diagnosed weak/failing kidneys OR elevated creatinine by sex-adjusted threshold",
+  "algorithm": "LogisticRegression L2 C=1.0",
+  "data_source": "nhanes_merged_adults_final_normalized.csv",
+  "n_train": 7437,
+  "prevalence": 0.0348,
+  "features": [
+    "uacr_mg_g",
+    "age_years",
+    "med_count",
+    "huq010___general_health_condition",
+    "huq071___overnight_hospital_patient_in_last_year",
+    "kiq005___how_often_have_urinary_leakage?",
+    "kiq480___how_many_times_urinate_in_night?",
+    "mcq160b___ever_told_you_had_congestive_heart_failure",
+    "mcq160a___ever_told_you_had_arthritis",
+    "mcq092___ever_receive_blood_transfusion",
+    "mcq520___abdominal_pain_during_past_12_months?",
+    "cdq010___shortness_of_breath_on_stairs/inclines",
+    "bpq020___ever_told_you_had_high_blood_pressure",
+    "paq650___vigorous_recreational_activities",
+    "alq151___ever_have_4/5_or_more_drinks_every_day?",
+    "smq078___how_soon_after_waking_do_you_smoke",
+    "whq040___like_to_weigh_more,_less_or_same"
+  ],
+  "n_features": 17,
+  "cv_folds": 5,
+  "cv_auc_mean": 0.8069,
+  "cv_avg_precision": 0.2316,
+  "pipeline_gate": 0.35,
+  "pipeline_gate_rationale": "Global routing gate: scores above 0.35 escalate to next pipeline step",
+  "recommended_threshold": 0.66,
+  "recommended_threshold_criterion": "Lowest t where precision>=17%, maximising recall: prec=0.170, recall=0.560, f1=0.261, flags=11.5%",
+  "pipeline_steps": [
+    "SimpleImputer(strategy=median, add_indicator=True)",
+    "LogisticRegression(L2, class_weight=balanced, C=1.0)"
+  ],
+  "leakage_removed": [
+    "kiq022 (target definition)",
+    "kiq025 (dialysis \u2014 proxy for target)"
+  ],
+  "selection_rationale": "L1 C=0.01 on 34-feat deduped set \u2192 17 survivors; AUC +0.017 vs 34-feat model, precision +2.2pp, recall +5pp at same threshold",
+  "changes_from_34feat_model": [
+    "Feature count reduced 34 \u2192 17 via L1 C=0.01",
+    "AUC improved 0.7903 \u2192 0.8069",
+    "AUPRC: 0.2332 \u2192 0.2316",
+    "Precision at rec_thr: 0.170 \u2192 0.170",
+    "Recall at rec_thr: 0.475 \u2192 0.560",
+    "Dropped: triglycerides, HDL, WBC, total protein, diabetes meds, liver condition, overweight, anemia treatment, bp_2+times, moderate exercise, avg drinks/day, smoking quantity, hepatitis C, work schedule"
+  ],
+  "notes": "Discovered via sbp/dbp_mean addition experiment \u2014 BP features did not survive L1, but re-selection at C=0.01 revealed more parsimonious feature set with better performance.",
+  "created_at": "2026-03-24T15:54:56.817791+00:00"
+}

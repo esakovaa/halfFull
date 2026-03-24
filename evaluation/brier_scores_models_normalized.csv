@@ -1,0 +1,12 @@
+model,condition,n_test,prevalence,mean_pred,brier_score
+hepatitis_bc_rf_cal_deduped20_v2.joblib,hepatitis_bc,1488,0.02554,0.02603,0.01553
+liver_rf_cal_deduped19_v2.joblib,liver,1488,0.04032,0.04284,0.03178
+iron_deficiency_rf_cal_deduped35_v2.joblib,iron_deficiency,1488,0.09341,0.09977,0.06088
+perimenopause_lr_deduped21_L2_v2.joblib,perimenopause,216,0.23148,0.40783,0.15178
+kidney_lr_deduped34_L2_v2.joblib,kidney,1488,0.03495,0.33284,0.15333
+anemia_lr_deduped36_L2_v2.joblib,anemia,1488,0.04839,0.3184,0.15633
+sleep_disorder_lr_trimmed29_L2_v2.joblib,sleep_disorder,1488,0.32325,0.45773,0.18339
+thyroid_lr_l2_reduced-12feat_v2.joblib,thyroid,1488,0.06183,0.39194,0.19178
+prediabetes_lr_deduped34_L2_C001_v2.joblib,prediabetes,1488,0.0914,0.4198,0.19848
+electrolyte_imbalance_lr_deduped28_L2_v2.joblib,electrolyte_imbalance,1488,0.07796,0.41317,0.20566
+hidden_inflammation_lr_deduped25_L2_v2.joblib,infection_inflammation,1486,0.32369,0.41393,0.2062
