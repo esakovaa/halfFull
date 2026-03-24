@@ -243,8 +243,60 @@ Rules:
       for (const w of safetyWarnings) console.warn(w);
     }
 
-    writeLog('deep_analyze', { answers, mlScores, clarificationQA, topConditions, result: safeData });
-    return NextResponse.json(safeData);
+    let finalResult = safeData;
+
+    // Fallthrough safety layer:
+    // Try a lightweight rewrite pass for tone/safety, but never block the pipeline.
+    // If the rewrite API fails, times out, or returns invalid JSON, we keep safeData.
+    try {
+      const safetyRewriteController = new AbortController();
+      const safetyRewriteTimeout = setTimeout(() => safetyRewriteController.abort(), 5_000);
+
+      const safetyRewriteResponse = await fetch(new URL('/api/safety-rewrite', req.url), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ report: safeData }),
+        signal: safetyRewriteController.signal,
+      }).finally(() => clearTimeout(safetyRewriteTimeout));
+
+      if (!safetyRewriteResponse.ok) {
+        const errText = await safetyRewriteResponse.text();
+        const warning = `[deep-analyze] safety rewrite failed (${safetyRewriteResponse.status}). Using original safe output.`;
+        console.warn(warning, errText);
+        writeLog('deep_analyze_safety_rewrite_warning', {
+          answers,
+          mlScores,
+          status: safetyRewriteResponse.status,
+          detail: errText,
+        });
+      } else {
+        const rewrittenCandidate = (await safetyRewriteResponse.json()) as Record<string, unknown>;
+        const rewrittenValidation = validateDeepAnalyzeSchema(rewrittenCandidate);
+
+        if (!rewrittenValidation.ok) {
+          const warning = '[deep-analyze] safety rewrite returned invalid schema. Using original safe output.';
+          console.warn(warning, rewrittenValidation.reason);
+          writeLog('deep_analyze_safety_rewrite_warning', {
+            answers,
+            mlScores,
+            reason: rewrittenValidation.reason,
+          });
+        } else {
+          finalResult = rewrittenValidation.data;
+        }
+      }
+    } catch (err) {
+      const warning = '[deep-analyze] safety rewrite timed out or failed. Using original safe output.';
+      console.warn(warning, String(err));
+      writeLog('deep_analyze_safety_rewrite_warning', {
+        answers,
+        mlScores,
+        error: String(err),
+      });
+    }
+
+    writeLog('deep_analyze', { answers, mlScores, clarificationQA, topConditions, result: finalResult });
+    return NextResponse.json(finalResult);
   } catch (err) {
     writeLog('deep_analyze_error', { answers, mlScores, error: String(err) });
     return NextResponse.json({ error: String(err) }, { status: 500 });
