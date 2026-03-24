@@ -61,7 +61,28 @@ _CONDITIONS_FIELDS = [
     "mcq092___ever_receive_blood_transfusion",
     "slq060___ever_told_by_doctor_have_sleep_disorder",
     "mcq080___doctor_ever_said_you_were_overweight",
+    "kiq026___ever_had_kidney_stones?",
 ]
+
+# Conditions the user confirmed via conditions_diagnosed → models to skip
+CONFIRMED_TO_MODELS: dict[str, list[str]] = {
+    "diq010___doctor_told_you_have_diabetes":             ["prediabetes"],
+    "heq030___ever_told_you_have_hepatitis_c?":          ["hepatitis_bc"],
+    "kiq022___ever_told_you_had_weak/failing_kidneys?":  ["kidney"],
+    "mcq160l___ever_told_you_had_any_liver_condition":   ["liver"],
+    "mcq053___taking_treatment_for_anemia/past_3_mos":   ["anemia", "iron_deficiency"],
+    "slq060___ever_told_by_doctor_have_sleep_disorder":  ["sleep_disorder"],
+}
+
+
+def _get_confirmed_models(flat: dict) -> list[str]:
+    """Return model names whose condition the user already confirmed via conditions_diagnosed."""
+    confirmed: list[str] = []
+    for field_id, models in CONFIRMED_TO_MODELS.items():
+        if flat.get(field_id) == 1:
+            confirmed.extend(models)
+    return list(set(confirmed))
+
 
 NORMALIZED_TO_LEGACY_KEYS = {
     "anemia": "anemia",
@@ -146,6 +167,14 @@ def _preprocess(answers: dict) -> dict:
         else:
             flat[key] = value
 
+    # Convert sedentary time from hours (quiz input) to minutes (model expects PAD680 in minutes).
+    pad_key = "pad680___minutes_sedentary_activity"
+    if pad_key in flat:
+        try:
+            flat[pad_key] = round(float(flat[pad_key]) * 60)
+        except (TypeError, ValueError):
+            pass
+
     # Derive alq111 (ever drank) from downstream answers if not already set.
     # alq111 = 2 (never) when avg drinks == 0 AND heavy drinking == 2 (no); else 1 (yes).
     if "alq111___ever_had_a_drink_of_any_kind_of_alcohol" not in flat:
@@ -194,6 +223,7 @@ def main() -> None:
         sys.exit(1)
 
     answers = _preprocess(answers)
+    confirmed_models = _get_confirmed_models(answers)
 
     try:
         from models_normalized.model_runner import ModelRunner
@@ -207,11 +237,12 @@ def main() -> None:
         raw_scores = runner.run_all_with_context(
             runner._get_normalizer().build_feature_vectors(answers),
             patient_context=_patient_context(answers),
+            skip_conditions=set(confirmed_models),
         )
         legacy_scores = _remap_scores(raw_scores)
         if not legacy_scores:
             print("[score] No scoreable normalized models produced scores; returning empty scores.", file=sys.stderr)
-        print(json.dumps(legacy_scores))
+        print(json.dumps({**legacy_scores, "confirmed": confirmed_models}))
     except Exception as exc:
         print(json.dumps({"error": str(exc)}))
         sys.exit(1)

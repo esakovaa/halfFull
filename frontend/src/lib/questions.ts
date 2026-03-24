@@ -25,7 +25,7 @@ export interface QuestionOption {
 export interface Conditional {
   parent_id: string;
   parent_values: string[];
-  condition_type: 'equals' | 'contains' | 'range' | 'lab_not_extracted';
+  condition_type: 'equals' | 'contains' | 'not_contains' | 'range' | 'lab_not_extracted';
 }
 
 export interface Question {
@@ -38,8 +38,10 @@ export interface Question {
   feature_name: string;
   options: QuestionOption[];
   conditional?: Conditional;
+  additional_conditional?: Conditional;
   shown_in_paths: ShownIn[];
   optional?: boolean;
+  screen_group?: string;
 }
 
 interface RawQuestion {
@@ -50,7 +52,9 @@ interface RawQuestion {
   feature_name: string;
   options: QuestionOption[];
   conditional?: Conditional;
+  additional_conditional?: Conditional;
   shown_in_paths?: ShownIn[];
+  screen_group?: string;
   validation?: {
     required?: boolean;
   };
@@ -103,8 +107,10 @@ export const QUESTIONS: Question[] = modules.flatMap((module) =>
     feature_name: question.feature_name,
     options: question.options,
     conditional: question.conditional,
+    additional_conditional: question.additional_conditional,
     shown_in_paths: question.shown_in_paths ?? module.shown_in_paths,
     optional: question.validation?.required === false,
+    screen_group: question.screen_group,
   }))
 );
 
@@ -130,6 +136,15 @@ function evaluateConditional(
     return !labAnswer?.structuredValues?.[fieldKey];
   }
 
+  // Explicit min–max range check: parent_values = ["min", "max"]
+  if (condition_type === 'range') {
+    const answer = Number(parentAnswer);
+    if (isNaN(answer)) return false;
+    const min = parent_values[0] !== undefined ? Number(parent_values[0]) : -Infinity;
+    const max = parent_values[1] !== undefined ? Number(parent_values[1]) : Infinity;
+    return answer >= min && answer <= max;
+  }
+
   if (parentQuestion?.type === 'numeric') {
     const maxThreshold = Math.max(
       ...parent_values.map((value) => {
@@ -141,6 +156,13 @@ function evaluateConditional(
     return answer > 0 && answer <= maxThreshold;
   }
 
+  if (condition_type === 'not_contains') {
+    if (Array.isArray(parentAnswer)) {
+      return !parent_values.some((value) => parentAnswer.includes(value));
+    }
+    return !parent_values.includes(String(parentAnswer));
+  }
+
   if (condition_type === 'equals') {
     return parent_values.includes(String(parentAnswer));
   }
@@ -150,6 +172,30 @@ function evaluateConditional(
   }
 
   return parent_values.includes(String(parentAnswer));
+}
+
+/**
+ * Groups a flat question path into "screens". Questions sharing the same
+ * screen_group are collapsed into a single screen (array of IDs). All other
+ * questions get their own screen (single-element array).
+ */
+export function getScreens(path: string[]): string[][] {
+  const screens: string[][] = [];
+  const groupsSeen = new Set<string>();
+
+  for (const id of path) {
+    const group = QUESTION_MAP[id]?.screen_group;
+    if (group) {
+      if (!groupsSeen.has(group)) {
+        groupsSeen.add(group);
+        screens.push(path.filter((qid) => QUESTION_MAP[qid]?.screen_group === group));
+      }
+      // else: already added as part of the group screen
+    } else {
+      screens.push([id]);
+    }
+  }
+  return screens;
 }
 
 export function resolveQuestionPath(answers: Record<string, unknown>): string[] {
@@ -176,6 +222,15 @@ export function resolveQuestionPath(answers: Record<string, unknown>): string[] 
         }
       }
     }
-    return evaluateConditional(question.conditional, parentQuestion, parentAnswer);
+    if (!evaluateConditional(question.conditional, parentQuestion, parentAnswer)) return false;
+
+    // Optional second condition — both must pass
+    if (question.additional_conditional) {
+      const addParentQ = getQuestion(question.additional_conditional.parent_id);
+      const addAnswer = answers[question.additional_conditional.parent_id];
+      if (!evaluateConditional(question.additional_conditional, addParentQ, addAnswer)) return false;
+    }
+
+    return true;
   }).map((question) => question.id);
 }

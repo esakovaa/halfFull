@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { spawn } from 'child_process';
-import path from 'path';
 import { writeLog } from '@/src/lib/logger';
 
 /**
@@ -9,68 +7,30 @@ import { writeLog } from '@/src/lib/logger';
  * Accepts a flat answers dict keyed by NHANES field_ids (values are
  * string-encoded NHANES codes, e.g. {"gender": "2", "age_years": "45"}).
  *
- * Spawns `scripts/score_answers.py` via the project venv Python, returns:
+ * Proxies to Railway backend, returns:
  *   { scores: { anemia: 0.31, thyroid: 0.55, ... } }
  *
  * Errors return { error: string } with an appropriate status code.
  */
 
-// Project root is one level above the Next.js `frontend/` directory
-const PROJECT_ROOT = path.resolve(process.cwd(), '..');
+const RAILWAY_URL = process.env.RAILWAY_API_URL ?? 'http://localhost:8000';
 
-// Python interpreter: prefer venv, fall back to system python3
-const PYTHON =
-  process.env.PYTHON_BIN ??
-  (process.platform === 'win32'
-    ? path.join(PROJECT_ROOT, 'ml_project_env_win', 'Scripts', 'python.exe')
-    : path.join(PROJECT_ROOT, 'ml_project_env', 'bin', 'python3'));
-
-const SCORE_SCRIPT = path.join(PROJECT_ROOT, 'scripts', 'score_answers.py');
-
-function runPython(answersJson: string): Promise<{ scores?: Record<string, number>; error?: string; warnings?: string[] }> {
-  return new Promise((resolve) => {
-    const child = spawn(PYTHON, [SCORE_SCRIPT], {
-      cwd: PROJECT_ROOT,
-      env: { ...process.env, PYTHONPATH: PROJECT_ROOT },
-    });
-
-    child.stdin.write(answersJson);
-    child.stdin.end();
-
-    let stdout = '';
-    let stderr = '';
-
-    child.stdout.on('data', (chunk: Buffer) => { stdout += chunk.toString(); });
-    child.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
-
-    child.on('close', (code) => {
-      if (!stdout.trim()) {
-        resolve({ error: `Python exited with code ${code}. stderr: ${stderr.slice(0, 400)}` });
-        return;
-      }
-
-      try {
-        const parsed = JSON.parse(stdout.trim()) as Record<string, unknown>;
-        if (parsed.error) {
-          resolve({ error: String(parsed.error) });
-        } else {
-          resolve({
-            scores: parsed as Record<string, number>,
-            warnings: stderr
-              .split(/\r?\n/)
-              .map((line) => line.trim())
-              .filter(Boolean),
-          });
-        }
-      } catch {
-        resolve({ error: `Could not parse Python output: ${stdout.slice(0, 200)}` });
-      }
-    });
-
-    child.on('error', (err) => {
-      resolve({ error: `Failed to spawn Python: ${err.message}` });
-    });
+async function callRailway(answers: Record<string, unknown>): Promise<{ scores?: Record<string, number>; confirmed?: string[]; error?: string }> {
+  const res = await fetch(`${RAILWAY_URL}/score`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(answers),
   });
+
+  const data = await res.json() as Record<string, unknown>;
+
+  if (!res.ok || data.error) {
+    return { error: String(data.error ?? `Railway returned ${res.status}`) };
+  }
+
+  // Separate the `confirmed` list from model probability scores
+  const { confirmed, ...scoreData } = data as { confirmed?: string[] } & Record<string, unknown>;
+  return { scores: scoreData as Record<string, number>, confirmed: confirmed ?? [] };
 }
 
 export async function POST(req: NextRequest) {
@@ -83,13 +43,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const result = await runPython(JSON.stringify(answers));
+  const result = await callRailway(answers);
 
   if (result.error) {
     writeLog('score_error', { answers, error: result.error });
     return NextResponse.json({ error: result.error }, { status: 500 });
   }
 
-  writeLog('score', { answers, scores: result.scores, warnings: result.warnings });
-  return NextResponse.json({ scores: result.scores });
+  writeLog('score', { answers, scores: result.scores, confirmed: result.confirmed });
+  return NextResponse.json({ scores: result.scores, confirmed: result.confirmed ?? [] });
 }

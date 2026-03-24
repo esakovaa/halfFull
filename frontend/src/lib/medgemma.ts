@@ -1,12 +1,13 @@
 import { buildMockDeepResult, buildOfflineDeepResult } from '@/src/lib/mockResults';
 // ─── Storage keys ─────────────────────────────────────────────────────────────
 
-export const MEDGEMMA_STORAGE_KEY  = 'halffull_medgemma_v1';
-export const DEEP_STORAGE_KEY      = 'halffull_deep_v1';
-export const FOLLOWUP_STORAGE_KEY  = 'halffull_followup_v1';
-export const ML_SCORES_KEY         = 'halffull_ml_scores_v1';
-export const BAYESIAN_SCORES_KEY   = 'halffull_bayesian_scores_v1';
-export const BAYESIAN_ANSWERS_KEY  = 'halffull_bayesian_answers_v1';
+export const MEDGEMMA_STORAGE_KEY    = 'halffull_medgemma_v1';
+export const DEEP_STORAGE_KEY        = 'halffull_deep_v1';
+export const FOLLOWUP_STORAGE_KEY    = 'halffull_followup_v1';
+export const ML_SCORES_KEY           = 'halffull_ml_scores_v1';
+export const BAYESIAN_SCORES_KEY     = 'halffull_bayesian_scores_v1';
+export const BAYESIAN_ANSWERS_KEY    = 'halffull_bayesian_answers_v1';
+export const CONFIRMED_CONDITIONS_KEY = 'halffull_confirmed_v1';
 
 export type AiMode = 'live' | 'mock' | 'offline';
 export type AiResultSource = 'live' | 'mock' | 'offline';
@@ -150,6 +151,22 @@ export function clearStoredMedGemmaResult(): void {
   window.sessionStorage.removeItem(ML_SCORES_KEY);
   window.sessionStorage.removeItem(BAYESIAN_SCORES_KEY);
   window.sessionStorage.removeItem(BAYESIAN_ANSWERS_KEY);
+  window.sessionStorage.removeItem(CONFIRMED_CONDITIONS_KEY);
+}
+
+export function storeConfirmedConditions(conditions: string[]): void {
+  if (typeof window === 'undefined') return;
+  window.sessionStorage.setItem(CONFIRMED_CONDITIONS_KEY, JSON.stringify(conditions));
+}
+
+export function readStoredConfirmedConditions(): string[] | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.sessionStorage.getItem(CONFIRMED_CONDITIONS_KEY);
+    return raw ? (JSON.parse(raw) as string[]) : null;
+  } catch {
+    return null;
+  }
 }
 
 export function storeBayesianScores(scores: Record<string, number>): void {
@@ -184,10 +201,15 @@ export function readStoredMLScores(): Record<string, number> | null {
 
 // ─── API fetch helpers ────────────────────────────────────────────────────────
 
-/** Call /api/score to run the ML model pipeline and get 11-condition probabilities */
+export interface MLScoreResult {
+  scores: Record<string, number>;
+  confirmed: string[];
+}
+
+/** Call /api/score to run the ML model pipeline and get condition probabilities + confirmed list */
 export async function fetchMLScores(
   answers: Record<string, unknown>
-): Promise<Record<string, number>> {
+): Promise<MLScoreResult> {
   const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.trim() || '';
   const response = await fetch(`${backendBaseUrl}/api/score`, {
     method: 'POST',
@@ -197,12 +219,12 @@ export async function fetchMLScores(
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(err.error ?? `HTTP ${response.status}`);
+    throw new Error((err as { error?: string }).error ?? `HTTP ${response.status}`);
   }
 
-  const data = await response.json() as { scores?: Record<string, number>; error?: string };
+  const data = await response.json() as { scores?: Record<string, number>; confirmed?: string[]; error?: string };
   if (data.error) throw new Error(data.error);
-  return data.scores ?? {};
+  return { scores: data.scores ?? {}, confirmed: data.confirmed ?? [] };
 }
 
 export function getConfiguredAiMode(): AiMode {
@@ -273,7 +295,8 @@ export async function fetchBayesianQuestions(
   mlScores: Record<string, number>,
   patientSex?: string,
 ): Promise<BayesianQuestionsResult> {
-  const response = await fetch('/api/bayesian-questions', {
+  const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.trim() || '';
+  const response = await fetch(`${backendBaseUrl}/api/bayesian-questions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ mlScores, patientSex }),
@@ -292,7 +315,8 @@ export async function fetchBayesianUpdate(
   answersByCondition: Record<string, Record<string, string>>,
   patientSex?: string,
 ): Promise<BayesianUpdateResult> {
-  const response = await fetch('/api/bayesian-update', {
+  const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.trim() || '';
+  const response = await fetch(`${backendBaseUrl}/api/bayesian-update`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ mlScores, confounderAnswers, answersByCondition, patientSex }),
@@ -309,7 +333,7 @@ export async function fetchBayesianUpdate(
 export async function fetchMLScoresWithTimeout(
   answers: Record<string, unknown>,
   timeoutMs = 15000
-): Promise<Record<string, number>> {
+): Promise<MLScoreResult> {
   return withTimeout(fetchMLScores(answers), timeoutMs, 'Assessment scoring');
 }
 

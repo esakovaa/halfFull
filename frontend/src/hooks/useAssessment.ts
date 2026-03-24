@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { resolveQuestionPath, getQuestion } from '@/src/lib/questions';
+import { resolveQuestionPath, getQuestion, getScreens } from '@/src/lib/questions';
 import { clearStoredMedGemmaResult } from '@/src/lib/medgemma';
 import type { Question } from '@/src/lib/questions';
 
@@ -47,36 +47,42 @@ export function useAssessment() {
     }
   }, [state, hydrated]);
 
-  // Recalculate path from current answers
+  // Recalculate path and screens from current answers
   const path = resolveQuestionPath(state.answers);
-  const currentIndex = Math.min(state.currentIndex, path.length - 1);
-  const currentId = path[currentIndex] ?? '';
-  const currentQuestion: Question | undefined = getQuestion(currentId);
+  const screens = getScreens(path);
+  const currentIndex = Math.min(state.currentIndex, screens.length - 1);
+  const currentScreenIds = screens[currentIndex] ?? [];
+  const currentQuestions = currentScreenIds
+    .map((id) => getQuestion(id))
+    .filter((q): q is Question => q !== undefined);
+  const currentQuestion: Question | undefined = currentQuestions[0];
+  const currentId = currentQuestion?.id ?? '';
   const currentAnswer = currentId ? state.answers[currentId] : undefined;
 
-  const totalQuestions = path.length;
+  const totalQuestions = screens.length;
   const progress = totalQuestions > 0 ? ((currentIndex + 1) / totalQuestions) * 100 : 0;
   const isFirst = currentIndex === 0;
-  const isLast = currentIndex === path.length - 1;
+  const isLast = currentIndex === screens.length - 1;
 
-  // A question is "answered" when it has a non-empty value (unless optional)
+  // All visible questions in the current screen must be answered (unless optional)
   const hasAnswer = useCallback((): boolean => {
-    if (!currentQuestion) return false;
-    if (currentQuestion.optional) return true;
-    const val = state.answers[currentId];
-    if (val === undefined || val === null || val === '') return false;
-    if (Array.isArray(val) && val.length === 0) return false;
-    // dual_numeric: all required sub-fields must be filled (binary required, numeric optional)
-    if (currentQuestion.type === 'dual_numeric') {
-      const obj = val as Record<string, string>;
-      return currentQuestion.options.every((opt) => {
-        if ((opt as { sub_type?: string }).sub_type === 'numeric') return true; // optional
-        const v = obj[opt.value];
-        return v !== undefined && v !== '';
-      });
-    }
-    return true;
-  }, [currentQuestion, state.answers, currentId]);
+    if (currentQuestions.length === 0) return false;
+    return currentQuestions.every((q) => {
+      if (q.optional) return true;
+      const val = state.answers[q.id];
+      if (val === undefined || val === null || val === '') return false;
+      if (Array.isArray(val) && val.length === 0) return false;
+      if (q.type === 'dual_numeric') {
+        const obj = val as Record<string, string>;
+        return q.options.every((opt) => {
+          if ((opt as { sub_type?: string }).sub_type === 'numeric') return true;
+          const v = obj[opt.value];
+          return v !== undefined && v !== '';
+        });
+      }
+      return true;
+    });
+  }, [currentQuestions, state.answers]);
 
   const setAnswer = useCallback((questionId: string, value: unknown) => {
     setState((prev) => {
@@ -97,9 +103,9 @@ export function useAssessment() {
   const goNext = useCallback(() => {
     setState((prev) => ({
       ...prev,
-      currentIndex: Math.min(prev.currentIndex + 1, path.length - 1),
+      currentIndex: Math.min(prev.currentIndex + 1, screens.length - 1),
     }));
-  }, [path.length]);
+  }, [screens.length]);
 
   const goBack = useCallback(() => {
     setState((prev) => ({
@@ -116,6 +122,7 @@ export function useAssessment() {
 
   return {
     currentQuestion,
+    currentQuestions,
     currentAnswer,
     currentIndex,
     totalQuestions,

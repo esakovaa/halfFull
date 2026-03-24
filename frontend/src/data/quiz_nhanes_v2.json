@@ -149,48 +149,6 @@
             }
           },
           {
-            "id": "blood_pressure",
-            "text": "What is your usual blood pressure?",
-            "help_text": "Enter your most recent reading if you know it. Systolic is the top number, diastolic is the bottom.",
-            "type": "dual_numeric",
-            "feature_name": "blood_pressure",
-            "options": [
-              {
-                "value": "sbp_mean",
-                "label": "Systolic (top, mmHg)"
-              },
-              {
-                "value": "dbp_mean",
-                "label": "Diastolic (bottom, mmHg)"
-              }
-            ],
-            "shown_in_paths": [
-              "full"
-            ],
-            "validation": {
-              "required": false
-            }
-          },
-          {
-            "id": "waist_cm",
-            "text": "What is your waist circumference?",
-            "help_text": "Measure around your waist at the level of your belly button. Leave blank if unsure.",
-            "type": "numeric",
-            "feature_name": "waist_cm",
-            "options": [
-              {
-                "value": "",
-                "label": "Waist (cm)"
-              }
-            ],
-            "shown_in_paths": [
-              "full"
-            ],
-            "validation": {
-              "required": false
-            }
-          },
-          {
             "id": "dmdeduc2",
             "text": "What is the highest level of education you have completed?",
             "type": "ordinal",
@@ -275,440 +233,9 @@
         ]
       },
       {
-        "id": "sleep",
-        "title": "Sleep",
-        "order": 2,
-        "shown_in_paths": [
-          "full"
-        ],
-        "questions": [
-          {
-            "id": "sleep_hours",
-            "text": "How many hours do you usually sleep?",
-            "help_text": "Count from when you fall asleep to when you wake up.",
-            "type": "dual_numeric",
-            "feature_name": "sleep_hours",
-            "options": [
-              {
-                "value": "sld012___sleep_hours___weekdays_or_workdays",
-                "label": "Weeknights"
-              },
-              {
-                "value": "sld013___sleep_hours___weekends",
-                "label": "Weekends"
-              }
-            ],
-            "shown_in_paths": [
-              "full"
-            ],
-            "validation": {
-              "required": true
-            }
-          },
-          {
-            "id": "slq030___how_often_do_you_snore?",
-            "text": "How often do you snore while sleeping?",
-            "help_text": "Based on what you've been told or noticed yourself.",
-            "type": "ordinal",
-            "feature_name": "slq030___how_often_do_you_snore?",
-            "options": [
-              {
-                "value": "0",
-                "label": "Never",
-                "encoded_value": 0
-              },
-              {
-                "value": "1",
-                "label": "Rarely (1\u20132 nights a week)",
-                "encoded_value": 1
-              },
-              {
-                "value": "2",
-                "label": "Sometimes (3\u20134 nights a week)",
-                "encoded_value": 2
-              },
-              {
-                "value": "3",
-                "label": "Often (5+ nights a week)",
-                "encoded_value": 3
-              },
-              {
-                "value": "4",
-                "label": "Almost every night",
-                "encoded_value": 4
-              }
-            ],
-            "shown_in_paths": [
-              "full"
-            ],
-            "validation": {
-              "required": true
-            }
-          },
-          {
-            "id": "slq050___ever_told_doctor_had_trouble_sleeping?",
-            "text": "Has a doctor or other health professional ever told you that you have trouble sleeping?",
-            "type": "binary",
-            "feature_name": "slq050___ever_told_doctor_had_trouble_sleeping?",
-            "options": [
-              {
-                "value": "1",
-                "label": "Yes",
-                "encoded_value": 1
-              },
-              {
-                "value": "2",
-                "label": "No",
-                "encoded_value": 2
-              }
-            ],
-            "shown_in_paths": [
-              "full"
-            ],
-            "validation": {
-              "required": true
-            }
-          }
-        ]
-      },
-      {
-        "id": "activity",
-        "title": "Activity & Work",
-        "order": 3,
-        "shown_in_paths": [
-          "full"
-        ],
-        "questions": [
-          {
-            "id": "ocq670___overall_work_schedule_past_3_months",
-            "text": "In the past 3 months, what best describes your work schedule?",
-            "type": "categorical",
-            "feature_name": "ocq670___overall_work_schedule_past_3_months",
-            "options": [
-              {
-                "value": "1",
-                "label": "Standard hours (e.g. 9\u20135)",
-                "encoded_value": 1
-              },
-              {
-                "value": "2",
-                "label": "Early morning shift",
-                "encoded_value": 2
-              },
-              {
-                "value": "3",
-                "label": "Late afternoon / evening shift",
-                "encoded_value": 3
-              },
-              {
-                "value": "4",
-                "label": "Night shift",
-                "encoded_value": 4
-              },
-              {
-                "value": "5",
-                "label": "Rotating shifts",
-                "encoded_value": 5
-              },
-              {
-                "value": "6",
-                "label": "Split shift",
-                "encoded_value": 6
-              },
-              {
-                "value": "7",
-                "label": "Irregular / variable hours",
-                "encoded_value": 7
-              },
-              {
-                "value": "8",
-                "label": "Not currently working",
-                "encoded_value": 8
-              }
-            ],
-            "shown_in_paths": [
-              "full"
-            ],
-            "validation": {
-              "required": true
-            }
-          },
-          {
-            "id": "ocq180___hours_worked_last_week_in_total_all_jobs",
-            "text": "How many hours did you work in total last week (all jobs combined)?",
-            "type": "numeric",
-            "feature_name": "ocq180___hours_worked_last_week_in_total_all_jobs",
-            "options": [
-              {
-                "value": "",
-                "label": "Hours per week"
-              }
-            ],
-            "conditional": {
-              "parent_id": "ocq670___overall_work_schedule_past_3_months",
-              "parent_values": [
-                "1",
-                "2",
-                "3",
-                "4",
-                "5",
-                "6",
-                "7"
-              ],
-              "condition_type": "equals"
-            },
-            "shown_in_paths": [
-              "full"
-            ],
-            "validation": {
-              "required": false
-            }
-          },
-          {
-            "id": "paq620___moderate_work_activity",
-            "text": "Does your job involve moderate physical activity?",
-            "help_text": "For example: walking, carrying light loads, cleaning, or cooking.",
-            "type": "binary",
-            "feature_name": "paq620___moderate_work_activity",
-            "options": [
-              {
-                "value": "1",
-                "label": "Yes",
-                "encoded_value": 1
-              },
-              {
-                "value": "2",
-                "label": "No",
-                "encoded_value": 2
-              }
-            ],
-            "shown_in_paths": [
-              "full"
-            ],
-            "validation": {
-              "required": true
-            }
-          },
-          {
-            "id": "free_time_activity",
-            "text": "In your free time",
-            "type": "dual_numeric",
-            "feature_name": "free_time_activity",
-            "options": [
-              {
-                "value": "paq665___moderate_recreational_activities",
-                "label": "Moderate activity",
-                "help_text": "Brisk walking, dancing, gardening, light cycling",
-                "sub_type": "binary"
-              },
-              {
-                "value": "paq650___vigorous_recreational_activities",
-                "label": "Vigorous activity",
-                "help_text": "Running, swimming, intense cycling, aerobics",
-                "sub_type": "binary"
-              },
-              {
-                "value": "pad680___minutes_sedentary_activity",
-                "label": "Daily sitting / lying time",
-                "help_text": "Not including sleep",
-                "unit": "min",
-                "sub_type": "numeric"
-              }
-            ],
-            "shown_in_paths": [
-              "full"
-            ],
-            "validation": {
-              "required": true
-            }
-          }
-        ]
-      },
-      {
-        "id": "lifestyle",
-        "title": "Lifestyle",
-        "order": 4,
-        "shown_in_paths": [
-          "full"
-        ],
-        "questions": [
-          {
-            "id": "alq130___avg_#_alcoholic_drinks/day___past_12_mos",
-            "text": "On days when you drink alcohol, how many drinks on average?",
-            "help_text": "Enter 0 if you don't drink. One drink = one beer, glass of wine, or single shot of spirits.",
-            "type": "numeric",
-            "feature_name": "alq130___avg_#_alcoholic_drinks/day___past_12_mos",
-            "options": [
-              {
-                "value": "",
-                "label": "Drinks per occasion"
-              }
-            ],
-            "shown_in_paths": [
-              "full"
-            ],
-            "validation": {
-              "required": false
-            }
-          },
-          {
-            "id": "alq151___ever_have_4/5_or_more_drinks_every_day?",
-            "text": "Have you ever had 4 or more drinks (if female) / 5 or more drinks (if male) on almost every day?",
-            "type": "binary",
-            "feature_name": "alq151___ever_have_4/5_or_more_drinks_every_day?",
-            "options": [
-              {
-                "value": "1",
-                "label": "Yes",
-                "encoded_value": 1
-              },
-              {
-                "value": "2",
-                "label": "No",
-                "encoded_value": 2
-              }
-            ],
-            "shown_in_paths": [
-              "full"
-            ],
-            "validation": {
-              "required": true
-            }
-          },
-          {
-            "id": "smq020___smoked_at_least_100_cigarettes_in_life",
-            "text": "Have you smoked at least 100 cigarettes in your entire life?",
-            "type": "binary",
-            "feature_name": "smq020___smoked_at_least_100_cigarettes_in_life",
-            "options": [
-              {
-                "value": "1",
-                "label": "Yes",
-                "encoded_value": 1
-              },
-              {
-                "value": "2",
-                "label": "No",
-                "encoded_value": 2
-              }
-            ],
-            "shown_in_paths": [
-              "full"
-            ],
-            "validation": {
-              "required": true
-            }
-          },
-          {
-            "id": "smq040___do_you_now_smoke_cigarettes?",
-            "text": "Do you currently smoke cigarettes?",
-            "type": "categorical",
-            "feature_name": "smq040___do_you_now_smoke_cigarettes?",
-            "options": [
-              {
-                "value": "1",
-                "label": "Yes, every day",
-                "encoded_value": 1
-              },
-              {
-                "value": "2",
-                "label": "Yes, some days",
-                "encoded_value": 2
-              },
-              {
-                "value": "3",
-                "label": "No, not at all",
-                "encoded_value": 3
-              }
-            ],
-            "conditional": {
-              "parent_id": "smq020___smoked_at_least_100_cigarettes_in_life",
-              "parent_values": [
-                "1"
-              ],
-              "condition_type": "equals"
-            },
-            "shown_in_paths": [
-              "full"
-            ],
-            "validation": {
-              "required": true
-            }
-          },
-          {
-            "id": "smd650___avg_#_cigarettes/day_during_past_30_days",
-            "text": "In the past 30 days, how many cigarettes did you smoke on an average day?",
-            "type": "numeric",
-            "feature_name": "smd650___avg_#_cigarettes/day_during_past_30_days",
-            "options": [
-              {
-                "value": "",
-                "label": "Cigarettes per day"
-              }
-            ],
-            "conditional": {
-              "parent_id": "smq040___do_you_now_smoke_cigarettes?",
-              "parent_values": [
-                "1",
-                "2"
-              ],
-              "condition_type": "equals"
-            },
-            "shown_in_paths": [
-              "full"
-            ],
-            "validation": {
-              "required": false
-            }
-          },
-          {
-            "id": "smq078___how_soon_after_waking_do_you_smoke",
-            "text": "How soon after waking up do you smoke your first cigarette?",
-            "type": "ordinal",
-            "feature_name": "smq078___how_soon_after_waking_do_you_smoke",
-            "options": [
-              {
-                "value": "1",
-                "label": "Within 5 minutes",
-                "encoded_value": 1
-              },
-              {
-                "value": "2",
-                "label": "6–30 minutes",
-                "encoded_value": 2
-              },
-              {
-                "value": "3",
-                "label": "31–60 minutes",
-                "encoded_value": 3
-              },
-              {
-                "value": "4",
-                "label": "More than 60 minutes",
-                "encoded_value": 4
-              }
-            ],
-            "conditional": {
-              "parent_id": "smq040___do_you_now_smoke_cigarettes?",
-              "parent_values": [
-                "1",
-                "2"
-              ],
-              "condition_type": "equals"
-            },
-            "shown_in_paths": [
-              "full"
-            ],
-            "validation": {
-              "required": true
-            }
-          }
-        ]
-      },
-      {
         "id": "health_history",
         "title": "Medical History",
-        "order": 5,
+        "order": 2,
         "shown_in_paths": [
           "full"
         ],
@@ -716,7 +243,7 @@
           {
             "id": "conditions_diagnosed",
             "text": "Have any of the following ever been confirmed by a doctor?",
-            "help_text": "Select all that apply \u2014 leave blank if none.",
+            "help_text": "Select all that apply — leave blank if none.",
             "type": "multi_select",
             "feature_name": "conditions_diagnosed",
             "options": [
@@ -779,6 +306,10 @@
               {
                 "value": "mcq080___doctor_ever_said_you_were_overweight",
                 "label": "Overweight (told by doctor)"
+              },
+              {
+                "value": "kiq026___ever_had_kidney_stones?",
+                "label": "Kidney stones (ever)"
               }
             ],
             "shown_in_paths": [
@@ -786,37 +317,6 @@
             ],
             "validation": {
               "required": false
-            }
-          },
-          {
-            "id": "bpq040a___taking_prescription_for_hypertension",
-            "text": "Are you currently taking prescribed medication for high blood pressure?",
-            "type": "binary",
-            "feature_name": "bpq040a___taking_prescription_for_hypertension",
-            "options": [
-              {
-                "value": "1",
-                "label": "Yes",
-                "encoded_value": 1
-              },
-              {
-                "value": "2",
-                "label": "No",
-                "encoded_value": 2
-              }
-            ],
-            "conditional": {
-              "parent_id": "conditions_diagnosed",
-              "parent_values": [
-                "bpq020___ever_told_you_had_high_blood_pressure"
-              ],
-              "condition_type": "contains"
-            },
-            "shown_in_paths": [
-              "full"
-            ],
-            "validation": {
-              "required": true
             }
           },
           {
@@ -1006,26 +506,24 @@
             }
           },
           {
-            "id": "mcq040___had_asthma_attack_in_past_year",
-            "text": "Have you had an asthma attack in the past 12 months?",
+            "id": "bpq050a___now_taking_prescribed_medicine_for_hbp",
+            "text": "Are you currently taking prescribed medicine for high blood pressure?",
             "type": "binary",
-            "feature_name": "mcq040___had_asthma_attack_in_past_year",
+            "feature_name": "bpq050a___now_taking_prescribed_medicine_for_hbp",
             "options": [
               {
                 "value": "1",
-                "label": "Yes",
-                "encoded_value": 1
+                "label": "Yes"
               },
               {
                 "value": "2",
-                "label": "No",
-                "encoded_value": 2
+                "label": "No"
               }
             ],
             "conditional": {
               "parent_id": "conditions_diagnosed",
               "parent_values": [
-                "mcq010___ever_been_told_you_have_asthma"
+                "bpq020___ever_told_you_had_high_blood_pressure"
               ],
               "condition_type": "contains"
             },
@@ -1133,6 +631,418 @@
         ]
       },
       {
+        "id": "sleep",
+        "title": "Sleep",
+        "order": 3,
+        "shown_in_paths": [
+          "full"
+        ],
+        "questions": [
+          {
+            "id": "sleep_hours",
+            "text": "How many hours do you usually sleep?",
+            "help_text": "Count from when you fall asleep to when you wake up.",
+            "type": "dual_numeric",
+            "feature_name": "sleep_hours",
+            "options": [
+              {
+                "value": "sld012___sleep_hours___weekdays_or_workdays",
+                "label": "Weeknights"
+              },
+              {
+                "value": "sld013___sleep_hours___weekends",
+                "label": "Weekends"
+              }
+            ],
+            "shown_in_paths": [
+              "full"
+            ],
+            "validation": {
+              "required": true
+            }
+          },
+          {
+            "id": "slq030___how_often_do_you_snore?",
+            "text": "How often do you snore while sleeping?",
+            "help_text": "Based on what you've been told or noticed yourself.",
+            "type": "ordinal",
+            "feature_name": "slq030___how_often_do_you_snore?",
+            "conditional": {
+              "parent_id": "conditions_diagnosed",
+              "parent_values": ["slq060___ever_told_by_doctor_have_sleep_disorder"],
+              "condition_type": "not_contains"
+            },
+            "options": [
+              {
+                "value": "0",
+                "label": "Never",
+                "encoded_value": 0
+              },
+              {
+                "value": "1",
+                "label": "Rarely (1–2 nights a week)",
+                "encoded_value": 1
+              },
+              {
+                "value": "2",
+                "label": "Sometimes (3–4 nights a week)",
+                "encoded_value": 2
+              },
+              {
+                "value": "3",
+                "label": "Often (5+ nights a week)",
+                "encoded_value": 3
+              },
+              {
+                "value": "4",
+                "label": "Almost every night",
+                "encoded_value": 4
+              }
+            ],
+            "shown_in_paths": [
+              "full"
+            ],
+            "validation": {
+              "required": true
+            }
+          }
+        ]
+      },
+      {
+        "id": "activity",
+        "title": "Activity & Work",
+        "order": 4,
+        "shown_in_paths": [
+          "full"
+        ],
+        "questions": [
+          {
+            "id": "ocq670___overall_work_schedule_past_3_months",
+            "text": "In the past 3 months, what best describes your work schedule?",
+            "type": "categorical",
+            "feature_name": "ocq670___overall_work_schedule_past_3_months",
+            "options": [
+              {
+                "value": "1",
+                "label": "Standard hours (e.g. 9–5)",
+                "encoded_value": 1
+              },
+              {
+                "value": "2",
+                "label": "Early morning shift",
+                "encoded_value": 2
+              },
+              {
+                "value": "3",
+                "label": "Late afternoon / evening shift",
+                "encoded_value": 3
+              },
+              {
+                "value": "4",
+                "label": "Night shift",
+                "encoded_value": 4
+              },
+              {
+                "value": "5",
+                "label": "Rotating shifts",
+                "encoded_value": 5
+              },
+              {
+                "value": "6",
+                "label": "Split shift",
+                "encoded_value": 6
+              },
+              {
+                "value": "7",
+                "label": "Irregular / variable hours",
+                "encoded_value": 7
+              },
+              {
+                "value": "8",
+                "label": "Not currently working",
+                "encoded_value": 8
+              }
+            ],
+            "shown_in_paths": [
+              "full"
+            ],
+            "validation": {
+              "required": true
+            }
+          },
+          {
+            "id": "ocq180___hours_worked_last_week_in_total_all_jobs",
+            "text": "How many hours did you work in total last week (all jobs combined)?",
+            "type": "numeric",
+            "feature_name": "ocq180___hours_worked_last_week_in_total_all_jobs",
+            "options": [
+              {
+                "value": "",
+                "label": "Hours per week"
+              }
+            ],
+            "conditional": {
+              "parent_id": "ocq670___overall_work_schedule_past_3_months",
+              "parent_values": [
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "7"
+              ],
+              "condition_type": "equals"
+            },
+            "shown_in_paths": [
+              "full"
+            ],
+            "validation": {
+              "required": false
+            }
+          },
+          {
+            "id": "paq620___moderate_work_activity",
+            "text": "Does your job involve moderate physical activity?",
+            "help_text": "For example: walking, carrying light loads, cleaning, or cooking.",
+            "type": "binary",
+            "feature_name": "paq620___moderate_work_activity",
+            "options": [
+              {
+                "value": "1",
+                "label": "Yes",
+                "encoded_value": 1
+              },
+              {
+                "value": "2",
+                "label": "No",
+                "encoded_value": 2
+              }
+            ],
+            "shown_in_paths": [
+              "full"
+            ],
+            "validation": {
+              "required": true
+            }
+          },
+          {
+            "id": "free_time_activity",
+            "text": "In your free time",
+            "type": "dual_numeric",
+            "feature_name": "free_time_activity",
+            "options": [
+              {
+                "value": "paq665___moderate_recreational_activities",
+                "label": "Moderate activity",
+                "help_text": "Brisk walking, dancing, gardening, light cycling",
+                "sub_type": "binary"
+              },
+              {
+                "value": "paq650___vigorous_recreational_activities",
+                "label": "Vigorous activity",
+                "help_text": "Running, swimming, intense cycling, aerobics",
+                "sub_type": "binary"
+              },
+              {
+                "value": "pad680___minutes_sedentary_activity",
+                "label": "Daily sitting / lying time",
+                "help_text": "Not including sleep",
+                "unit": "hrs",
+                "sub_type": "numeric"
+              }
+            ],
+            "shown_in_paths": [
+              "full"
+            ],
+            "validation": {
+              "required": true
+            }
+          }
+        ]
+      },
+      {
+        "id": "lifestyle",
+        "title": "Lifestyle",
+        "order": 5,
+        "shown_in_paths": [
+          "full"
+        ],
+        "questions": [
+          {
+            "id": "alq130___avg_#_alcoholic_drinks/day___past_12_mos",
+            "text": "On days when you drink alcohol, how many drinks on average?",
+            "help_text": "Enter 0 if you don't drink. One drink = one beer, glass of wine, or single shot of spirits.",
+            "type": "numeric",
+            "feature_name": "alq130___avg_#_alcoholic_drinks/day___past_12_mos",
+            "options": [
+              {
+                "value": "",
+                "label": "Drinks per occasion"
+              }
+            ],
+            "shown_in_paths": [
+              "full"
+            ],
+            "validation": {
+              "required": false
+            }
+          },
+          {
+            "id": "alq151___ever_have_4/5_or_more_drinks_every_day?",
+            "text": "Have you ever had 4 or more drinks (if female) / 5 or more drinks (if male) on almost every day?",
+            "type": "binary",
+            "feature_name": "alq151___ever_have_4/5_or_more_drinks_every_day?",
+            "options": [
+              {
+                "value": "1",
+                "label": "Yes",
+                "encoded_value": 1
+              },
+              {
+                "value": "2",
+                "label": "No",
+                "encoded_value": 2
+              }
+            ],
+            "shown_in_paths": [
+              "full"
+            ],
+            "validation": {
+              "required": true
+            }
+          },
+          {
+            "id": "smq020___smoked_at_least_100_cigarettes_in_life",
+            "text": "Have you smoked at least 100 cigarettes in your entire life?",
+            "type": "binary",
+            "feature_name": "smq020___smoked_at_least_100_cigarettes_in_life",
+            "options": [
+              {
+                "value": "1",
+                "label": "Yes",
+                "encoded_value": 1
+              },
+              {
+                "value": "2",
+                "label": "No",
+                "encoded_value": 2
+              }
+            ],
+            "shown_in_paths": [
+              "full"
+            ],
+            "validation": {
+              "required": true
+            }
+          },
+          {
+            "id": "smq040___do_you_now_smoke_cigarettes?",
+            "text": "Do you currently smoke cigarettes?",
+            "type": "categorical",
+            "feature_name": "smq040___do_you_now_smoke_cigarettes?",
+            "options": [
+              {
+                "value": "1",
+                "label": "Yes, every day",
+                "encoded_value": 1
+              },
+              {
+                "value": "2",
+                "label": "Yes, some days",
+                "encoded_value": 2
+              },
+              {
+                "value": "3",
+                "label": "No, not at all",
+                "encoded_value": 3
+              }
+            ],
+            "conditional": {
+              "parent_id": "smq020___smoked_at_least_100_cigarettes_in_life",
+              "parent_values": [
+                "1"
+              ],
+              "condition_type": "equals"
+            },
+            "shown_in_paths": [
+              "full"
+            ],
+            "validation": {
+              "required": true
+            }
+          },
+          {
+            "id": "smd650___avg_#_cigarettes/day_during_past_30_days",
+            "text": "In the past 30 days, how many cigarettes did you smoke on an average day?",
+            "type": "numeric",
+            "feature_name": "smd650___avg_#_cigarettes/day_during_past_30_days",
+            "options": [
+              {
+                "value": "",
+                "label": "Cigarettes per day"
+              }
+            ],
+            "conditional": {
+              "parent_id": "smq040___do_you_now_smoke_cigarettes?",
+              "parent_values": [
+                "1",
+                "2"
+              ],
+              "condition_type": "equals"
+            },
+            "shown_in_paths": [
+              "full"
+            ],
+            "validation": {
+              "required": false
+            }
+          },
+          {
+            "id": "smq078___how_soon_after_waking_do_you_smoke",
+            "text": "How soon after waking up do you smoke your first cigarette?",
+            "type": "ordinal",
+            "feature_name": "smq078___how_soon_after_waking_do_you_smoke",
+            "options": [
+              {
+                "value": "1",
+                "label": "Within 5 minutes",
+                "encoded_value": 1
+              },
+              {
+                "value": "2",
+                "label": "6–30 minutes",
+                "encoded_value": 2
+              },
+              {
+                "value": "3",
+                "label": "31–60 minutes",
+                "encoded_value": 3
+              },
+              {
+                "value": "4",
+                "label": "More than 60 minutes",
+                "encoded_value": 4
+              }
+            ],
+            "conditional": {
+              "parent_id": "smq040___do_you_now_smoke_cigarettes?",
+              "parent_values": [
+                "1",
+                "2"
+              ],
+              "condition_type": "equals"
+            },
+            "shown_in_paths": [
+              "full"
+            ],
+            "validation": {
+              "required": true
+            }
+          }
+        ]
+      },
+      {
         "id": "symptoms",
         "title": "Your Symptoms",
         "order": 6,
@@ -1140,6 +1050,67 @@
           "full"
         ],
         "questions": [
+          {
+            "id": "symptoms_physical",
+            "text": "Physical symptoms",
+            "type": "dual_numeric",
+            "feature_name": "symptoms_physical",
+            "options": [
+              {
+                "value": "cdq010___shortness_of_breath_on_stairs/inclines",
+                "label": "Short of breath on stairs or uphill",
+                "sub_type": "binary"
+              },
+              {
+                "value": "mcq520___abdominal_pain_during_past_12_months?",
+                "label": "Recurring abdominal pain (past year)",
+                "help_text": "More than one episode",
+                "sub_type": "binary"
+              },
+              {
+                "value": "slq050___ever_told_doctor_had_trouble_sleeping?",
+                "label": "Trouble sleeping (told by doctor)",
+                "sub_type": "binary"
+              }
+            ],
+            "shown_in_paths": [
+              "full"
+            ],
+            "validation": {
+              "required": true
+            }
+          },
+          {
+            "id": "mcq540___ever_seen_a_dr_about_this_pain",
+            "text": "Have you seen a doctor about this abdominal pain?",
+            "type": "binary",
+            "feature_name": "mcq540___ever_seen_a_dr_about_this_pain",
+            "options": [
+              {
+                "value": "1",
+                "label": "Yes",
+                "encoded_value": 1
+              },
+              {
+                "value": "2",
+                "label": "No",
+                "encoded_value": 2
+              }
+            ],
+            "conditional": {
+              "parent_id": "mcq520___abdominal_pain_during_past_12_months?",
+              "parent_values": [
+                "1"
+              ],
+              "condition_type": "equals"
+            },
+            "shown_in_paths": [
+              "full"
+            ],
+            "validation": {
+              "required": true
+            }
+          },
           {
             "id": "kiq480___how_many_times_urinate_in_night?",
             "text": "On a typical night, how many times do you wake up to urinate?",
@@ -1186,7 +1157,7 @@
           },
           {
             "id": "kiq005___how_often_have_urinary_leakage?",
-            "text": "How often do you experience any urinary leakage \u2014 even just a small amount?",
+            "text": "How often do you experience any urinary leakage — even just a small amount?",
             "type": "ordinal",
             "feature_name": "kiq005___how_often_have_urinary_leakage?",
             "options": [
@@ -1255,7 +1226,8 @@
             ],
             "validation": {
               "required": true
-            }
+            },
+            "screen_group": "urinary_detail"
           },
           {
             "id": "kiq450___how_frequently_does_this_occur?",
@@ -1296,68 +1268,8 @@
             ],
             "validation": {
               "required": true
-            }
-          },
-          {
-            "id": "symptoms_physical",
-            "text": "Physical symptoms",
-            "type": "dual_numeric",
-            "feature_name": "symptoms_physical",
-            "options": [
-              {
-                "value": "kiq026___ever_had_kidney_stones?",
-                "label": "Kidney stones (ever)",
-                "sub_type": "binary"
-              },
-              {
-                "value": "cdq010___shortness_of_breath_on_stairs/inclines",
-                "label": "Short of breath on stairs or uphill",
-                "sub_type": "binary"
-              },
-              {
-                "value": "mcq520___abdominal_pain_during_past_12_months?",
-                "label": "Recurring abdominal pain (past year)",
-                "help_text": "More than one episode",
-                "sub_type": "binary"
-              }
-            ],
-            "shown_in_paths": [
-              "full"
-            ],
-            "validation": {
-              "required": true
-            }
-          },
-          {
-            "id": "mcq540___ever_seen_a_dr_about_this_pain",
-            "text": "Have you seen a doctor about this abdominal pain?",
-            "type": "binary",
-            "feature_name": "mcq540___ever_seen_a_dr_about_this_pain",
-            "options": [
-              {
-                "value": "1",
-                "label": "Yes",
-                "encoded_value": 1
-              },
-              {
-                "value": "2",
-                "label": "No",
-                "encoded_value": 2
-              }
-            ],
-            "conditional": {
-              "parent_id": "mcq520___abdominal_pain_during_past_12_months?",
-              "parent_values": [
-                "1"
-              ],
-              "condition_type": "equals"
             },
-            "shown_in_paths": [
-              "full"
-            ],
-            "validation": {
-              "required": true
-            }
+            "screen_group": "urinary_detail"
           },
           {
             "id": "kiq010___how_much_urine_lose_each_time?",
@@ -1396,7 +1308,8 @@
             ],
             "validation": {
               "required": true
-            }
+            },
+            "screen_group": "urinary_detail"
           },
           {
             "id": "kiq042___leak_urine_during_physical_activities?",
@@ -1430,7 +1343,50 @@
             ],
             "validation": {
               "required": true
-            }
+            },
+            "screen_group": "urinary_detail"
+          },
+          {
+            "id": "kiq430___how_frequently_does_this_occur?",
+            "text": "How often does urinary leakage happen during physical activities?",
+            "type": "ordinal",
+            "feature_name": "kiq430___how_frequently_does_this_occur?",
+            "options": [
+              {
+                "value": "1",
+                "label": "Less than once a month",
+                "encoded_value": 1
+              },
+              {
+                "value": "2",
+                "label": "A few times a month",
+                "encoded_value": 2
+              },
+              {
+                "value": "3",
+                "label": "A few times a week",
+                "encoded_value": 3
+              },
+              {
+                "value": "4",
+                "label": "Every day or almost every day",
+                "encoded_value": 4
+              }
+            ],
+            "conditional": {
+              "parent_id": "kiq042___leak_urine_during_physical_activities?",
+              "parent_values": [
+                "1"
+              ],
+              "condition_type": "equals"
+            },
+            "shown_in_paths": [
+              "full"
+            ],
+            "validation": {
+              "required": true
+            },
+            "screen_group": "urinary_detail"
           },
           {
             "id": "kiq052___how_much_were_daily_activities_affected?",
@@ -1479,48 +1435,8 @@
             ],
             "validation": {
               "required": true
-            }
-          },
-          {
-            "id": "kiq430___how_frequently_does_this_occur?",
-            "text": "How often does urinary leakage happen during physical activities?",
-            "type": "ordinal",
-            "feature_name": "kiq430___how_frequently_does_this_occur?",
-            "options": [
-              {
-                "value": "1",
-                "label": "Less than once a month",
-                "encoded_value": 1
-              },
-              {
-                "value": "2",
-                "label": "A few times a month",
-                "encoded_value": 2
-              },
-              {
-                "value": "3",
-                "label": "A few times a week",
-                "encoded_value": 3
-              },
-              {
-                "value": "4",
-                "label": "Every day or almost every day",
-                "encoded_value": 4
-              }
-            ],
-            "conditional": {
-              "parent_id": "kiq042___leak_urine_during_physical_activities?",
-              "parent_values": [
-                "1"
-              ],
-              "condition_type": "equals"
             },
-            "shown_in_paths": [
-              "full"
-            ],
-            "validation": {
-              "required": true
-            }
+            "screen_group": "urinary_detail"
           }
         ]
       },
@@ -1566,6 +1482,14 @@
             ],
             "validation": {
               "required": true
+            },
+            "additional_conditional": {
+              "parent_id": "age_years",
+              "parent_values": [
+                "13",
+                "50"
+              ],
+              "condition_type": "range"
             }
           },
           {

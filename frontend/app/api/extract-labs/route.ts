@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const runtime = 'nodejs';
+
 const HF_MODEL = 'google/medgemma-1.5-4b-it';
 const HF_API_URL = process.env.HF_ENDPOINT_URL
   ? `${process.env.HF_ENDPOINT_URL}/v1/chat/completions`
@@ -124,7 +126,7 @@ export async function POST(req: NextRequest) {
     // Step 1: always extract raw text with pdf-parse (works without MedGemma)
     let rawText: string;
     try {
-      const { PDFParse } = await import('pdf-parse');
+      const { PDFParse } = await import('pdf-parse/node');
       const buffer = Buffer.from(base64, 'base64');
       const parser = new PDFParse({ data: buffer });
       const pdfData = await parser.getText();

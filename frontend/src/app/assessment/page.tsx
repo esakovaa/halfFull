@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useAssessment } from '@/src/hooks/useAssessment';
 import { QuestionCard } from '@/src/components/QuestionCard';
+import { QuestionGroupCard } from '@/src/components/QuestionGroupCard';
 import { ProgressBar } from '@/src/components/ProgressBar';
 import { NavButtons } from '@/src/components/NavButtons';
 
@@ -10,6 +11,7 @@ export default function AssessmentPage() {
   const router = useRouter();
   const {
     currentQuestion,
+    currentQuestions,
     currentAnswer,
     currentIndex,
     totalQuestions,
@@ -18,6 +20,7 @@ export default function AssessmentPage() {
     isLast,
     hasAnswer,
     hydrated,
+    answers,
     setAnswer,
     goNext,
     goBack,
@@ -69,11 +72,19 @@ export default function AssessmentPage() {
       {/* Main question area */}
       <main className="flex-1 px-5 py-4 overflow-y-auto">
         <div className="max-w-lg mx-auto">
-          <QuestionCard
-            question={currentQuestion}
-            value={currentAnswer}
-            onChange={(val) => setAnswer(currentQuestion.id, val)}
-          />
+          {currentQuestions.length > 1 ? (
+            <QuestionGroupCard
+              questions={currentQuestions}
+              answers={answers}
+              onAnswer={setAnswer}
+            />
+          ) : (
+            <QuestionCard
+              question={currentQuestion}
+              value={currentAnswer}
+              onChange={(val) => setAnswer(currentQuestion.id, val)}
+            />
+          )}
         </div>
       </main>
 

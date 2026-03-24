@@ -156,6 +156,8 @@ QUIZ_FIELD_ALIASES: dict[str, str] = {
     "ldl_cholesterol_mg_dl":           "LBDLDL_ldl_cholesterol_friedewald_mg_dl",
     "total_protein_g_dl":              "LBXSTP_total_protein_g_dl",
     "wbc_1000_cells_ul":               "LBXWBCSI_white_blood_cell_count_1000_cells_ul",
+    # quiz education field → canonical name expected by _add_derived_columns
+    "dmdeduc2":                        "education",
     # dbp_mean / sbp_mean removed from quiz — kept here so stale submissions
     # are silently dropped rather than passed through to the normalizer
     "dbp_mean":                        None,
@@ -471,6 +473,7 @@ class ModelRunner:
         self,
         feature_vectors: dict[str, pd.DataFrame],
         patient_context: dict[str, Any] | None = None,
+        skip_conditions: set[str] | None = None,
     ) -> dict[str, float]:
         """
         Score all loaded models in parallel using pre-built feature DataFrames.
@@ -496,6 +499,11 @@ class ModelRunner:
         results: dict[str, float] = {}
 
         def _score_one(condition: str) -> tuple[str, float | None]:
+            # Skip models for conditions the user already confirmed
+            if skip_conditions and condition in skip_conditions:
+                log.info("Skipping '%s' — already confirmed by user", condition)
+                return condition, None
+
             # Perimenopause hard gate
             if condition == "perimenopause":
                 if not self._is_perimenopause_eligible(patient_context):

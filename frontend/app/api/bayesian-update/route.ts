@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { spawn } from 'child_process';
-import path from 'path';
 import { writeLog } from '@/src/lib/logger';
 
 /**
@@ -24,42 +22,26 @@ import { writeLog } from '@/src/lib/logger';
  * }
  */
 
-const PROJECT_ROOT = path.resolve(process.cwd(), '..');
-const PYTHON = process.env.PYTHON_BIN
-  ?? (process.platform === 'win32'
-    ? path.join(PROJECT_ROOT, 'ml_project_env_win', 'Scripts', 'python.exe')
-    : path.join(PROJECT_ROOT, 'ml_project_env', 'bin', 'python3'));
-const SCRIPT = path.join(PROJECT_ROOT, 'bayesian', 'run_bayesian.py');
+const RAILWAY_URL = process.env.RAILWAY_API_URL ?? 'http://localhost:8000';
 
-function runPython(input: object): Promise<Record<string, unknown>> {
-  return new Promise((resolve) => {
-    const child = spawn(PYTHON, [SCRIPT], {
-      cwd: PROJECT_ROOT,
-      env: { ...process.env, PYTHONPATH: PROJECT_ROOT },
-    });
-
-    child.stdin.write(JSON.stringify(input));
-    child.stdin.end();
-
-    let stdout = '';
-    let stderr = '';
-    child.stdout.on('data', (chunk: Buffer) => { stdout += chunk.toString(); });
-    child.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
-
-    child.on('close', (code) => {
-      if (!stdout.trim()) {
-        resolve({ error: `Python exited ${code}. stderr: ${stderr.slice(0, 400)}` });
-        return;
-      }
-      try {
-        resolve(JSON.parse(stdout.trim()) as Record<string, unknown>);
-      } catch {
-        resolve({ error: `Could not parse Python output: ${stdout.slice(0, 200)}` });
-      }
-    });
-
-    child.on('error', (err) => resolve({ error: `Spawn failed: ${err.message}` }));
+async function callRailway(body: object): Promise<Record<string, unknown>> {
+  const res = await fetch(`${RAILWAY_URL}/bayesian/update`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
   });
+
+  const data = await res.json() as Record<string, unknown>;
+
+  if (!res.ok || data.error) {
+    return { error: String(data.error ?? `Railway returned ${res.status}`) };
+  }
+
+  // Translate Python snake_case keys to camelCase expected by the frontend
+  return {
+    posteriorScores: data.posterior_scores ?? data.posteriorScores ?? {},
+    details: data.details ?? {},
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -86,7 +68,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const result = await runPython({
+  const result = await callRailway({
     mode: 'update',
     ml_scores: mlScores,
     confounder_answers: confounderAnswers,

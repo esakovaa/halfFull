@@ -10,6 +10,7 @@ import {
   readStoredMLScores,
   storeBayesianAnswers,
   storeBayesianScores,
+  storeConfirmedConditions,
   storeMLScores,
 } from '@/src/lib/medgemma';
 import type {
@@ -141,8 +142,10 @@ export default function ClarifyPage() {
         // ML scoring happens here — after quiz+labs are submitted
         let mlScores = readStoredMLScores() ?? {};
         if (Object.keys(mlScores).length === 0) {
-          mlScores = await fetchMLScoresWithTimeout(answers);
-          storeMLScores(mlScores);
+          const { scores, confirmed } = await fetchMLScoresWithTimeout(answers);
+          storeMLScores(scores);
+          storeConfirmedConditions(confirmed);
+          mlScores = scores;
         }
         if (cancelled.current) return;
 
