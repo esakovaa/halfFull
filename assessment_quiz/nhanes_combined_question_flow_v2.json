@@ -1,8 +1,8 @@
 {
   "metadata": {
     "name": "NHANES Combined Question Flow v2",
-    "version": "2.0.0",
-    "generated_on": "2026-03-19",
+    "version": "2.1.0",
+    "generated_on": "2026-03-24",
     "description": "Branching questionnaire aligned to the current HalfFull screening feature summary and model-runner contract.",
     "frontend_answer_contract": "Submit a flat dictionary keyed by field_id. Values should be the NHANES numeric codes for coded questions, or numbers for numeric entry questions.",
     "conditions_covered": [
@@ -39,7 +39,8 @@
       "The questionnaire uses NHANES-coded answers where official categories exist; optional checkup fields are included for model-required numeric inputs that are not NHANES questionnaire variables.",
       "The frontend should send a flat dictionary keyed by field_id.",
       "The transformer script should create all alias columns and *_miss flags automatically.",
-      "Perimenopause replaces the older menopause label."
+      "Perimenopause replaces the older menopause label.",
+      "v2.1.0 (2026-03-24): Removed 7 unused fields (alq170_helper_times_4_5_drinks_one_occasion_30d, bpq040a___taking_prescription_for_hypertension, dbp_mean, glucose_mg_dl, mcq040___had_asthma_attack_in_past_year, paq605___vigorous_work_activity, sbp_mean). Renamed 3 lab field_ids to match model feature names: {'ldl_cholesterol_mg_dl': 'LBDLDL_ldl_cholesterol_friedewald_mg_dl', 'total_protein_g_dl': 'LBXSTP_total_protein_g_dl', 'wbc_1000_cells_ul': 'LBXWBCSI_white_blood_cell_count_1000_cells_ul'}."
     ]
   },
   "question_groups": [
@@ -248,20 +249,6 @@
               "label": "BMI",
               "input_type": "number",
               "nhanes_code": "BMXBMI"
-            },
-            {
-              "field_id": "sbp_mean",
-              "label": "Average systolic blood pressure",
-              "input_type": "number",
-              "nhanes_code": "BPXSY1-3",
-              "helper_only": true
-            },
-            {
-              "field_id": "dbp_mean",
-              "label": "Average diastolic blood pressure",
-              "input_type": "number",
-              "nhanes_code": "BPXDI1-3",
-              "helper_only": true
             }
           ]
         }
@@ -539,32 +526,6 @@
                 }
               ],
               "source_url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/OCQ_J.htm"
-            },
-            {
-              "field_id": "paq605___vigorous_work_activity",
-              "label": "Vigorous work activity",
-              "input_type": "coded_single_select",
-              "nhanes_code": "PAQ605",
-              "options": [
-                {
-                  "value": 1,
-                  "label": "Yes"
-                },
-                {
-                  "value": 2,
-                  "label": "No"
-                },
-                {
-                  "value": 7,
-                  "label": "Refused"
-                },
-                {
-                  "value": 9,
-                  "label": "Don't know"
-                }
-              ],
-              "source_url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/OCQ_J.htm",
-              "helper_only": true
             }
           ]
         }
@@ -637,18 +598,6 @@
                 }
               ],
               "source_url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/P_ALQ.htm"
-            },
-            {
-              "field_id": "alq170_helper_times_4_5_drinks_one_occasion_30d",
-              "label": "Past 30 days: number of times 4/5+ drinks on one occasion",
-              "input_type": "integer",
-              "nhanes_code": "ALQ170",
-              "source_url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/P_ALQ.htm",
-              "helper_only": true,
-              "derives": [
-                "ever_heavy_drinker",
-                "alcohol_any_risk_signal"
-              ]
             }
           ]
         },
@@ -855,40 +804,6 @@
                   1
                 ]
               }
-            },
-            {
-              "field_id": "bpq040a___taking_prescription_for_hypertension",
-              "label": "Taking prescription for hypertension",
-              "input_type": "coded_single_select",
-              "nhanes_code": "BPQ040A",
-              "options": [
-                {
-                  "value": 1,
-                  "label": "Yes"
-                },
-                {
-                  "value": 2,
-                  "label": "No"
-                },
-                {
-                  "value": 7,
-                  "label": "Refused"
-                },
-                {
-                  "value": 9,
-                  "label": "Don't know"
-                }
-              ],
-              "source_url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/P_BPQ.htm",
-              "branch_if": {
-                "depends_on": "bpq020___ever_told_you_had_high_blood_pressure",
-                "show_if_values": [
-                  1
-                ]
-              },
-              "derives": [
-                "taking_bp_prescription"
-              ]
             },
             {
               "field_id": "bpq050a___now_taking_prescribed_medicine_for_hbp",
@@ -1842,37 +1757,6 @@
                 }
               ],
               "source_url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/P_MCQ.htm"
-            },
-            {
-              "field_id": "mcq040___had_asthma_attack_in_past_year",
-              "label": "Had asthma attack in past year",
-              "input_type": "coded_single_select",
-              "nhanes_code": "MCQ040",
-              "options": [
-                {
-                  "value": 1,
-                  "label": "Yes"
-                },
-                {
-                  "value": 2,
-                  "label": "No"
-                },
-                {
-                  "value": 7,
-                  "label": "Refused"
-                },
-                {
-                  "value": 9,
-                  "label": "Don't know"
-                }
-              ],
-              "source_url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/P_MCQ.htm",
-              "branch_if": {
-                "depends_on": "mcq010___ever_been_told_you_have_asthma",
-                "show_if_values": [
-                  1
-                ]
-              }
             }
           ]
         },
@@ -2193,10 +2077,11 @@
               "helper_only": true
             },
             {
-              "field_id": "ldl_cholesterol_mg_dl",
+              "field_id": "LBDLDL_ldl_cholesterol_friedewald_mg_dl",
               "label": "LDL cholesterol (mg/dL)",
               "input_type": "number",
-              "helper_only": true
+              "helper_only": true,
+              "quiz_field_id_alias": "ldl_cholesterol_mg_dl"
             },
             {
               "field_id": "triglycerides_mg_dl",
@@ -2211,28 +2096,24 @@
               "helper_only": true
             },
             {
-              "field_id": "glucose_mg_dl",
-              "label": "Glucose (mg/dL)",
-              "input_type": "number",
-              "helper_only": true
-            },
-            {
               "field_id": "uacr_mg_g",
               "label": "Urine albumin-creatinine ratio (mg/g)",
               "input_type": "number",
               "helper_only": true
             },
             {
-              "field_id": "total_protein_g_dl",
+              "field_id": "LBXSTP_total_protein_g_dl",
               "label": "Total protein (g/dL)",
               "input_type": "number",
-              "helper_only": true
+              "helper_only": true,
+              "quiz_field_id_alias": "total_protein_g_dl"
             },
             {
-              "field_id": "wbc_1000_cells_ul",
+              "field_id": "LBXWBCSI_white_blood_cell_count_1000_cells_ul",
               "label": "White blood cell count (1000 cells/uL)",
               "input_type": "number",
-              "helper_only": true
+              "helper_only": true,
+              "quiz_field_id_alias": "wbc_1000_cells_ul"
             }
           ]
         }
@@ -2432,5 +2313,10 @@
       "feature": "*_miss",
       "rule": "Auto-generated as 1 when the corresponding base feature is null/blank, else 0"
     }
-  ]
+  ],
+  "field_id_aliases": {
+    "LBDLDL_ldl_cholesterol_friedewald_mg_dl": "ldl_cholesterol_mg_dl",
+    "LBXSTP_total_protein_g_dl": "total_protein_g_dl",
+    "LBXWBCSI_white_blood_cell_count_1000_cells_ul": "wbc_1000_cells_ul"
+  }
 }
