@@ -478,13 +478,17 @@ BAYESIAN_PRIORS: dict[str, float] = {
 # Format: (normal_mean, normal_std, abnormal_value_for_positive_condition)
 # ---------------------------------------------------------------------------
 LAB_REFERENCE: dict[str, tuple[float, float, float]] = {
-    "hemoglobin":   (14.5, 1.5, 10.5),   # nhanes_reference_ranges_used.csv
-    "tsh":          (2.0,  0.8, 6.5),    # FALLBACK: clinical normal 0.4-4.0 mIU/L
-    "ferritin":     (80.0, 30.0, 12.0),  # FALLBACK: low in iron deficiency
-    "crp":          (1.0,  0.5, 9.0),    # FALLBACK: CRP normal <3 mg/L
-    "hba1c":        (5.2,  0.3, 6.5),    # nhanes_reference_ranges_used.csv: upper 5.7%
-    "vitamin_d":    (35.0, 10.0, 15.0),  # FALLBACK: clinical estimate
-    "cortisol":     (15.0, 4.0, 8.0),    # FALLBACK: clinical estimate
+    "hemoglobin":              (14.5,  1.5,   10.5),  # nhanes_reference_ranges_used.csv
+    "tsh":                     (2.0,   0.8,    6.5),  # FALLBACK: clinical normal 0.4-4.0 mIU/L
+    "ferritin":                (80.0,  30.0,  12.0),  # FALLBACK: low in iron deficiency
+    "crp":                     (1.0,   0.5,    9.0),  # FALLBACK: CRP normal <3 mg/L
+    "hba1c":                   (5.2,   0.3,    6.5),  # nhanes_reference_ranges_used.csv: upper 5.7%
+    "vitamin_d":               (35.0,  10.0,  15.0),  # FALLBACK: clinical estimate
+    "cortisol":                (15.0,  4.0,    8.0),  # FALLBACK: clinical estimate
+    "total_cholesterol_mg_dl": (185.8, 35.0,  150.0), # NHANES mean; abnormal = low (iron_deficiency)
+    "triglycerides_mg_dl":     (108.0, 40.0,   60.0), # NHANES mean; abnormal = low (iron_deficiency)
+    "fasting_glucose_mg_dl":   (99.0,  15.0,  126.0), # NHANES mean; abnormal = high (prediabetes)
+    "wbc_1000_cells_ul":       (7.0,   1.5,   11.0),  # NHANES mean; abnormal = high (inflammation/kidney)
 }
 
 # Lab shifts per condition (direction: "high" or "low")
@@ -493,13 +497,13 @@ CONDITION_LAB_SHIFT: dict[str, dict[str, str]] = {
     "menopause":             {"cortisol": "low",  "vitamin_d": "low"},
     "perimenopause":         {"cortisol": "low",  "vitamin_d": "low"},
     "hypothyroidism":        {"tsh": "high",       "vitamin_d": "low"},
-    "kidney_disease":        {"crp": "high",       "hemoglobin": "low"},
+    "kidney_disease":        {"crp": "high",     "hemoglobin": "low",   "wbc_1000_cells_ul": "high"},
     "sleep_disorder":        {"cortisol": "high"},
     "anemia":                {"hemoglobin": "low",  "ferritin": "low"},
-    "iron_deficiency":       {"ferritin": "low",    "hemoglobin": "low"},
+    "iron_deficiency":       {"ferritin": "low",    "hemoglobin": "low",   "total_cholesterol_mg_dl": "low", "triglycerides_mg_dl": "low"},
     "hepatitis":             {"crp": "high",        "vitamin_d": "low"},
-    "prediabetes":           {"hba1c": "high",      "vitamin_d": "low"},
-    "inflammation":          {"crp": "high",        "vitamin_d": "low"},
+    "prediabetes":           {"hba1c": "high",      "vitamin_d": "low",    "fasting_glucose_mg_dl": "high"},
+    "inflammation":          {"crp": "high",        "vitamin_d": "low",    "wbc_1000_cells_ul": "high"},
     "electrolyte_imbalance": {"crp": "high"},
 }
 
@@ -583,6 +587,95 @@ COMORBIDITY_PAIRS: list[tuple[str, str]] = [
     ("menopause",            "hypothyroidism"),
     ("iron_deficiency",      "perimenopause"),
 ]
+
+
+# ---------------------------------------------------------------------------
+# BAYESIAN ANSWERS — load lr_tables.json and generate per-profile answers
+# ---------------------------------------------------------------------------
+
+_LR_TABLES_PATH = PROJECT_ROOT / "bayesian" / "lr_tables.json"
+try:
+    with open(_LR_TABLES_PATH, "r", encoding="utf-8") as _f:
+        _LR_TABLES: dict = json.load(_f)
+except (FileNotFoundError, json.JSONDecodeError) as _e:
+    _LR_TABLES = {}
+    logger.warning("lr_tables.json not found or invalid — bayesian_answers will be empty: %s", _e)
+
+# Maps eval condition IDs → bayesian lr_tables condition keys
+_EVAL_TO_BAYESIAN_KEY: dict[str, str] = {
+    "anemia":                "anemia",
+    "iron_deficiency":       "iron_deficiency",
+    "hypothyroidism":        "thyroid",
+    "kidney_disease":        "kidney",
+    "sleep_disorder":        "sleep_disorder",
+    "hepatitis":             "hepatitis",
+    "prediabetes":           "prediabetes",
+    "inflammation":          "inflammation",
+    "electrolyte_imbalance": "electrolytes",
+    "perimenopause":         "perimenopause",
+    "menopause":             "perimenopause",
+    "liver":                 "liver",
+}
+
+
+def _generate_bayesian_answers(
+    condition: str | None,
+    profile_type: str,
+    sex: str,
+    rng: random.Random,
+) -> dict[str, Any]:
+    """
+    Generate bayesian_answers dict for a profile from lr_tables.json.
+
+    For positive profiles: target condition questions answered with highest-LR option.
+    For borderline profiles: first half of target questions positive, rest neutral.
+    For negative / healthy / edge: all questions answered with lowest-LR (neutral) option.
+    Non-target condition questions are always answered neutrally.
+    Gender-filtered questions (gender_filter == "female") are skipped for male profiles.
+    """
+    if not _LR_TABLES:
+        return {}
+
+    answers: dict[str, Any] = {}
+    target_bayesian_key = _EVAL_TO_BAYESIAN_KEY.get(condition or "") if condition else None
+    conditions_data = _LR_TABLES.get("conditions", {})
+
+    for cond_key, cond_data in conditions_data.items():
+        questions = cond_data.get("questions", [])
+        n_questions = len(questions)
+        is_target = (cond_key == target_bayesian_key)
+
+        for q_idx, q in enumerate(questions):
+            qid = q.get("id")
+            if not qid:
+                continue
+
+            # Skip gender-filtered questions for the wrong sex
+            if q.get("gender_filter") == "female" and sex != "F":
+                continue
+
+            options = q.get("answer_options", [])
+            if not options:
+                continue
+
+            if is_target:
+                if profile_type == "positive":
+                    positive = True
+                elif profile_type == "borderline":
+                    positive = q_idx < (n_questions + 1) // 2  # first half positive
+                else:
+                    positive = False
+            else:
+                positive = False
+
+            if positive:
+                chosen = max(options, key=lambda o: o.get("lr", 0.0))
+            else:
+                chosen = min(options, key=lambda o: o.get("lr", float("inf")))
+
+            answers[qid] = chosen["value"]
+
+    return answers
 
 
 # ---------------------------------------------------------------------------
@@ -929,7 +1022,7 @@ def generate_profile(
     edge_conditions: list[str] | None = None,
 ) -> dict:
     """Build a single complete profile dict."""
-    has_labs = rng.random() < 0.40
+    has_labs = True
 
     if profile_type == "positive":
         symptom_vector = _generate_symptom_vector_positive(condition or "anemia", nprng)
@@ -944,18 +1037,23 @@ def generate_profile(
     else:
         symptom_vector = _generate_symptom_vector_negative(nprng)
 
+    demographics = _generate_demographics(rng, nprng, condition)
     lab_values = _generate_lab_values(profile_type, condition, nprng) if has_labs else None
     quiz_path = "hybrid" if lab_values is not None else "full"
+    bayesian_answers = _generate_bayesian_answers(
+        condition, profile_type, demographics.get("sex", "M"), rng
+    )
 
     profile = {
-        "profile_id":       _make_profile_id(prefix, index),
-        "profile_type":     profile_type,
-        "target_condition": condition if condition else "",
-        "demographics":     _generate_demographics(rng, nprng, condition),
-        "symptom_vector":   symptom_vector,
-        "lab_values":       lab_values,
-        "quiz_path":        quiz_path,
-        "ground_truth":     _make_ground_truth(profile_type, condition, edge_conditions),
+        "profile_id":        _make_profile_id(prefix, index),
+        "profile_type":      profile_type,
+        "target_condition":  condition if condition else "",
+        "demographics":      demographics,
+        "symptom_vector":    symptom_vector,
+        "lab_values":        lab_values,
+        "quiz_path":         quiz_path,
+        "bayesian_answers":  bayesian_answers,
+        "ground_truth":      _make_ground_truth(profile_type, condition, edge_conditions),
         "metadata": {
             "generated_by":    "cohort_generator_v2.py",
             "generation_date": date.today().isoformat(),
