@@ -7,6 +7,7 @@ import { useAssessment } from '@/src/hooks/useAssessment';
 import { computeResults, buildDiagnosesFromML } from '@/src/lib/mockResults';
 import {
   getInsightForDiagnosis,
+  readStoredConfirmedConditions,
   readStoredDeepResult,
   readStoredMLScores,
 } from '@/src/lib/medgemma';
@@ -25,6 +26,7 @@ export default function ResultsPage() {
   // Use ML diagnoses when available (from /api/score run on /processing page),
   // falling back to rule-based diagnoses from computeResults.
   const mlScores = hydrated ? readStoredMLScores() : null;
+  const confirmedConditions = hydrated ? (readStoredConfirmedConditions() ?? []) : [];
   const diagnoses = mlScores
     ? buildDiagnosesFromML(mlScores)
     : computeResults(answers).diagnoses;
@@ -340,6 +342,33 @@ export default function ResultsPage() {
               />
             ))}
           </div>
+
+          {/* ── Confirmed conditions reminder ─────────────────────────────── */}
+          {confirmedConditions.length > 0 && (
+            <div className="section-card px-5 py-4">
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--color-ink-soft)]">
+                Already confirmed
+              </p>
+              <p className="text-sm leading-6 text-[var(--color-ink)]">
+                In addition to{' '}
+                <span className="font-semibold">
+                  {confirmedConditions
+                    .map((c) => ({
+                      anemia: 'anaemia',
+                      iron_deficiency: 'iron deficiency',
+                      thyroid: 'thyroid dysfunction',
+                      kidney: 'kidney disease',
+                      sleep_disorder: 'sleep disorder',
+                      liver: 'liver disease',
+                      prediabetes: 'prediabetes',
+                      hepatitis_bc: 'hepatitis B/C',
+                    }[c] ?? c))
+                    .join(', ')}
+                </span>{' '}
+                you already have confirmed, it may be worth checking in with your doctor about how these interact with the patterns above and whether any monitoring or follow-up tests are due.
+              </p>
+            </div>
+          )}
 
           {/* ── MedGemma next steps ───────────────────────────────────────── */}
           {deep?.nextSteps && (
