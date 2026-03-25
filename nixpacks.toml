@@ -1,0 +1,11 @@
+# Tell Railway/Nixpacks to build the Python backend, not the Next.js frontend.
+# Without this, Nixpacks auto-detects frontend/package.json and runs Next.js.
+
+[phases.setup]
+nixPkgs = ["python311"]
+
+[phases.install]
+cmds = ["pip install -r requirements.txt"]
+
+[start]
+cmd = "uvicorn api.server:app --host 0.0.0.0 --port $PORT"
