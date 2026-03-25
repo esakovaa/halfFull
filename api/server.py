@@ -28,9 +28,9 @@ import os
 import sys
 import warnings
 
-# Suppress noisy model-loading output
+# Suppress noisy model-loading output (warnings only — do NOT disable logging
+# globally here, it would silence uvicorn's startup and crash messages too)
 warnings.filterwarnings("ignore")
-logging.disable(logging.CRITICAL)
 
 # Ensure project root is on sys.path so models_normalized/ and bayesian/ are importable
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -40,8 +40,6 @@ if ROOT not in sys.path:
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-# Re-enable logging for this server after silencing library noise
-logging.disable(logging.NOTSET)
 log = logging.getLogger("railway_api")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s  %(message)s")
 
