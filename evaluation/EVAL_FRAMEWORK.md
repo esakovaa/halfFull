@@ -1,8 +1,8 @@
 # HalfFull — Evaluation Framework
 
-**Version:** 1.0  
-**Status:** Draft  
-**Last updated:** March 2026  
+**Version:** 1.1
+**Status:** Draft
+**Last updated:** March 2026
 **Authors:** Inbal, Anna, Daniela
 
 ---
@@ -79,15 +79,15 @@ The Bayesian layer refines ML posterior scores using targeted follow-up question
 
 ---
 
-## Layer 3 — Cluster Layer
+## Layer 3 — KNN Neighbour Layer
 
-The cluster layer uses unsupervised neighbour matching (UMAP + HDBSCAN) to surface extended lab suggestions and co-occurrence signals.
+The KNN layer finds the 50 most similar NHANES participants (by cosine distance on questionnaire-derived features) and surfaces lab tests that are disproportionately out of range in that neighbourhood vs the general population. It does not contribute to condition ranking — it exclusively adds lab suggestions downstream of the ML + Bayesian layers.
 
 | Metric | Description | Target |
 |---|---|---|
-| **Extended lab precision** | Of out-of-range labs suggested by the cluster, what fraction are clinically meaningful? | ≥ 40% |
-| **Cluster coverage delta** | Does adding cluster signals increase top-3 coverage vs models-only? | ≥ +3 percentage points, or neutral minimum |
-| **Neighbour label consistency** | Within each cluster, what fraction of members share at least one condition label? | ≥ 60% intra-cluster label agreement on dominant condition |
+| **Condition-lab recall** | For synthetic profiles with a known target condition, what fraction of the clinically expected labs for that condition appear in the KNN output? (e.g. anemia profile → hemoglobin, MCV, ferritin) | ≥ 50% of condition-expected labs surfaced |
+| **Mean signal lift** | Average lift (neighbour abnormality rate ÷ population base rate) across all surfaced signals across the synthetic cohort. Already filtered at lift > 1.5×; this tracks the realised quality above that floor. | Mean lift ≥ 2.5× |
+| **Cross-condition differentiation** | Do different condition profiles receive meaningfully different lab recommendations? Measured as Jaccard overlap between the top-5 surfaced labs for any two distinct condition profiles. Low overlap = KNN is condition-sensitive, not returning the same generic labs for everyone. | Pairwise Jaccard overlap < 35% |
 
 ---
 
