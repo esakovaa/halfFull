@@ -332,7 +332,7 @@ export async function fetchBayesianUpdate(
 
 export async function fetchMLScoresWithTimeout(
   answers: Record<string, unknown>,
-  timeoutMs = 15000
+  timeoutMs = 40000
 ): Promise<MLScoreResult> {
   return withTimeout(fetchMLScores(answers), timeoutMs, 'Assessment scoring');
 }
@@ -340,7 +340,7 @@ export async function fetchMLScoresWithTimeout(
 export async function fetchBayesianQuestionsWithTimeout(
   mlScores: Record<string, number>,
   patientSex?: string,
-  timeoutMs = 15000,
+  timeoutMs = 30000,
 ): Promise<BayesianQuestionsResult> {
   return withTimeout(fetchBayesianQuestions(mlScores, patientSex), timeoutMs, 'Clarify questions');
 }

@@ -173,6 +173,24 @@ async def knn_score(answers: dict):
         raise HTTPException(status_code=500, detail=str(exc))
 
 
+# ── Startup: pre-warm models so first user request is fast ───────────────────
+
+@app.on_event("startup")
+async def startup_preload():
+    import asyncio
+    loop = asyncio.get_event_loop()
+    try:
+        await loop.run_in_executor(None, get_model_runner)
+        log.info("ModelRunner pre-loaded")
+    except Exception as exc:
+        log.warning("ModelRunner pre-load failed (will retry on first request): %s", exc)
+    try:
+        await loop.run_in_executor(None, get_bayesian_updater)
+        log.info("BayesianUpdater pre-loaded")
+    except Exception as exc:
+        log.warning("BayesianUpdater pre-load failed (will retry on first request): %s", exc)
+
+
 # ── Health check ─────────────────────────────────────────────────────────────
 
 @app.get("/health")
