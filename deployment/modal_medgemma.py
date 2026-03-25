@@ -16,8 +16,6 @@ Deploy:
     modal deploy deployment/modal_medgemma.py
 """
 
-from __future__ import annotations
-
 import base64
 import io
 import os
@@ -115,29 +113,45 @@ def to_hf_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
 )
 @modal.asgi_app()
 def api():
-    from fastapi import FastAPI, HTTPException
-    from pydantic import BaseModel
+    from fastapi import FastAPI, HTTPException, Request
 
     web_app = FastAPI(title="HalfFull MedGemma API")
-
-    class ChatRequest(BaseModel):
-        model: str | None = None
-        messages: list[dict[str, Any]]
-        max_tokens: int = 400
-        temperature: float | None = None
 
     @web_app.get("/health")
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
     @web_app.post("/v1/chat/completions")
-    async def chat(body: ChatRequest) -> dict[str, Any]:
+    async def chat(request: Request) -> dict[str, Any]:
+        data = await request.json()
+        messages = data.get("messages", [])
+        max_tokens = min(int(data.get("max_tokens") or 400), 500)
+        if not messages:
+            raise HTTPException(status_code=422, detail="messages field is required")
         try:
             pipe = get_pipeline()
-            hf_messages = to_hf_messages(body.messages)
-            max_tokens = min(int(body.max_tokens or 400), 500)
+            # Convert system messages to user turn — Gemma chat template
+            # doesn't support the system role; fold it into the first user message
+            hf_messages = to_hf_messages(messages)
+            system_text = ""
+            filtered = []
+            for m in hf_messages:
+                if m.get("role") == "system":
+                    parts = m.get("content", [])
+                    system_text = " ".join(
+                        p.get("text", "") for p in parts
+                        if isinstance(p, dict) and p.get("type") == "text"
+                    )
+                else:
+                    filtered.append(m)
+            if system_text and filtered:
+                first_content = filtered[0].get("content", [])
+                if first_content and isinstance(first_content, list):
+                    first_content.insert(0, {"type": "text", "text": system_text + "\n\n"})
+            hf_messages = filtered
 
-            output = pipe(hf_messages, max_new_tokens=max_tokens, do_sample=False)
+            output = pipe(hf_messages, max_new_tokens=max_tokens,
+                          do_sample=True, temperature=0.3)
 
             generated = output[0]["generated_text"]
             last = generated[-1]["content"] if isinstance(generated, list) else generated
@@ -152,6 +166,7 @@ def api():
             content = clean_response(str(last))
             return {"choices": [{"message": {"role": "assistant", "content": content}}]}
         except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
+            import traceback
+            raise HTTPException(status_code=500, detail=f"{exc}\n{traceback.format_exc()}") from exc
 
     return web_app
