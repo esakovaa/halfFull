@@ -392,7 +392,7 @@ export async function getDeepAnalysisWithFallback(
   answers: Record<string, unknown>,
   mlScores?: Record<string, number>,
   clarificationQA?: BayesianClarificationRecord,
-  timeoutMs = 20000
+  timeoutMs = 85000  // matches the 90s abort controller in /api/deep-analyze
 ): Promise<DeepMedGemmaResult> {
   const mode = getConfiguredAiMode();
 
@@ -411,7 +411,8 @@ export async function getDeepAnalysisWithFallback(
       'Live AI analysis'
     );
     return buildStoredDeepResult('live', liveResult);
-  } catch {
+  } catch (err) {
+    console.error('[getDeepAnalysisWithFallback] Live analysis failed, using mock fallback:', err);
     try {
       return createMockDeepResult(answers);
     } catch {
