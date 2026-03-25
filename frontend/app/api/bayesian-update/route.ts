@@ -22,7 +22,8 @@ import { writeLog } from '@/src/lib/logger';
  * }
  */
 
-const RAILWAY_URL = process.env.RAILWAY_API_URL ?? 'http://localhost:8000';
+const _rawBackendUrl = process.env.RAILWAY_API_URL ?? process.env.BACKEND_URL ?? 'http://localhost:8000';
+const RAILWAY_URL = _rawBackendUrl.startsWith('http') ? _rawBackendUrl : `https://${_rawBackendUrl}`;
 
 async function callRailway(body: object): Promise<Record<string, unknown>> {
   const res = await fetch(`${RAILWAY_URL}/bayesian/update`, {

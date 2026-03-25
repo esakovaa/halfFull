@@ -13,7 +13,8 @@ import { writeLog } from '@/src/lib/logger';
  * Errors return { error: string } with an appropriate status code.
  */
 
-const RAILWAY_URL = process.env.RAILWAY_API_URL ?? 'http://localhost:8000';
+const _rawBackendUrl = process.env.RAILWAY_API_URL ?? process.env.BACKEND_URL ?? 'http://localhost:8000';
+const RAILWAY_URL = _rawBackendUrl.startsWith('http') ? _rawBackendUrl : `https://${_rawBackendUrl}`;
 
 async function callRailway(answers: Record<string, unknown>): Promise<{ scores?: Record<string, number>; confirmed?: string[]; error?: string }> {
   const res = await fetch(`${RAILWAY_URL}/score`, {

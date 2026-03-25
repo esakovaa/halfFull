@@ -7,7 +7,8 @@ import { ML_THRESHOLD, selectTopConditions } from '@/src/lib/mlConfig';
 
 export const maxDuration = 60;
 
-const RAILWAY_URL = process.env.RAILWAY_API_URL ?? 'http://localhost:8000';
+const _rawBackendUrl = process.env.RAILWAY_API_URL ?? process.env.BACKEND_URL ?? 'http://localhost:8000';
+const RAILWAY_URL = _rawBackendUrl.startsWith('http') ? _rawBackendUrl : `https://${_rawBackendUrl}`;
 const HF_MODEL = 'google/medgemma-1.5-4b-it';
 const HF_API_URL = process.env.HF_ENDPOINT_URL
   ? `${process.env.HF_ENDPOINT_URL}/v1/chat/completions`
