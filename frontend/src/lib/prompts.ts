@@ -330,6 +330,7 @@ Respond with valid JSON only. No markdown, no preamble, no narrative prose:
 Rules:
 - supportedSuspicions: 0 to 3 items. Returning [] is valid and correct if evidence is weak.
 - Never invent a diagnosisId outside the allowlist: ${CONDITION_ALLOWLIST}.
+- Every diagnosisId listed under "These hypotheses cleared the ML filtering layer" must end up in either supportedSuspicions or declinedSuspicions. Do not silently drop any candidate.
 - keySymptoms must come from this patient's actual answers — no invented symptoms.
 - recommendedTests must be tied to a supportedSuspicion — no generic panels.
 - recommendedSpecialties: 0 to 3. Must be empty if supportedSuspicions is empty.
@@ -401,6 +402,12 @@ ${oneShot ? `EXAMPLE OF A PERFECT OUTPUT (follow this quality and structure, app
     "Example: 'Concentration and memory difficulties affecting work performance'"
   ],
   "personalizedSummary": "1-2 sentence prose version of the above bullets, plus a screening-tool disclaimer. This is the fallback when bullets are not rendered.",
+  "declinedSuspicions": [
+    {
+      "diagnosisId": "copy every declined diagnosisId from the clinical evidence",
+      "reason": "translate the declined reason into concise patient-friendly language without adding new medical claims"
+    }
+  ],
   "insights": [
     {
       "diagnosisId": "exact id from supportedSuspicions in the clinical evidence — no others",
@@ -408,6 +415,7 @@ ${oneShot ? `EXAMPLE OF A PERFECT OUTPUT (follow this quality and structure, app
       "personalNote": "2-3 sentences. Translate the reasoning and anchorEvidence for this suspicion into patient-friendly language. Do NOT restate the symptoms already covered in summaryPoints."
     }
   ],
+  "recoveryOutlook": "2-3 sentences. Explain what improvement may depend on in this case, what is treatable or investigable first, and how quickly people often start getting clarity once the right doctor and tests are involved. Keep it realistic and non-diagnostic.",
   "nextSteps": "2 sentences maximum. Who to see first and why (from recommendedSpecialties[0].clinicalReason), then who second. No symptom descriptions. No condition explanations.",
   "doctorKitSummary": "2 first-person sentences. An opening statement this patient can read at any of the recommended appointments. Draw from keySymptoms — make it specific to this patient.",
   "doctorKitQuestions": [],
@@ -417,8 +425,12 @@ ${oneShot ? `EXAMPLE OF A PERFECT OUTPUT (follow this quality and structure, app
       "specialty": "copy from recommendedSpecialties[].specialty in the clinical evidence — no new specialties",
       "priority": "copy from recommendedSpecialties[].priority",
       "reason": "1-2 sentences. Why this specific specialty for this specific patient. Draw from clinicalReason. No symptom list here.",
-      "symptomsToDiscuss": "copy symptomsToRaise from the matching recommendedSpecialties entry",
-      "suggestedTests": "copy testsToRequest from the matching recommendedSpecialties entry"
+      "symptomsToDiscuss": [
+        "Copy each item from symptomsToRaise in the matching recommendedSpecialties entry. Keep as an array and do not leave empty when recommendedSpecialties is non-empty."
+      ],
+      "suggestedTests": [
+        "Copy each item from testsToRequest in the matching recommendedSpecialties entry. Keep as an array and do not leave empty when the matching entry has tests."
+      ]
     }
   ],
   "doctorKits": [
@@ -428,9 +440,15 @@ ${oneShot ? `EXAMPLE OF A PERFECT OUTPUT (follow this quality and structure, app
       "bringToAppointment": [
         "Practical logistics only: diary, prior results, medication list. No medical content."
       ],
-      "concerningSymptoms": "copy symptomsToRaise from the matching recommendedSpecialties entry",
-      "recommendedTests": "copy testsToRequest from the matching recommendedSpecialties entry",
-      "discussionPoints": "translate discussionPoints from the matching recommendedSpecialties entry into first-person patient language. Keep clinical specificity — do not genericise.",
+      "concerningSymptoms": [
+        "Copy each item from symptomsToRaise in the matching recommendedSpecialties entry. Keep as an array and do not leave empty when recommendedSpecialties is non-empty."
+      ],
+      "recommendedTests": [
+        "Copy each item from testsToRequest in the matching recommendedSpecialties entry. Keep as an array and do not leave empty when the matching entry has tests."
+      ],
+      "discussionPoints": [
+        "Translate each discussionPoints item from the matching recommendedSpecialties entry into first-person patient language. Keep as an array and preserve clinical specificity."
+      ],
       "whatToSay": "2 sentences. First-person appointment opener specific to this specialty. State what you suspect and what you want to rule out or confirm."
     }
   ],
@@ -439,10 +457,16 @@ ${oneShot ? `EXAMPLE OF A PERFECT OUTPUT (follow this quality and structure, app
 
 Rules:
 - summaryPoints: 4-6 items. Symptoms only. No conditions, tests, or doctors.
+- summaryPoints are required. Do not omit them.
+- If supportedSuspicions plus declinedSuspicions exist in the clinical evidence, every diagnosisId from both arrays must appear in either insights or declinedSuspicions. Do not silently drop conditions from the clinical evidence.
 - insights: one entry per supportedSuspicion. No extras. personalNote must NOT repeat summaryPoints content.
+- declinedSuspicions: copy every declined suspicion from the clinical evidence unless the list is empty.
+- recoveryOutlook: required. Keep it grounded in the actual supported suspicions and next-step pathway.
 - nextSteps: maximum 2 sentences. Action sequence only.
 - recommendedDoctors: one per recommendedSpecialty. MUST include at least one non-GP specialist.
 - doctorKits: one kit per recommendedDoctor, same order.
+- When recommendedSpecialties is non-empty, do not leave symptomsToDiscuss, concerningSymptoms, or discussionPoints empty. Copy or translate the matching array entries.
+- Keep suggestedTests and recommendedTests as arrays. If the clinical evidence entry has tests, the output array must preserve them.
 - Do NOT add conditions, symptoms, tests, or discussion points not in the clinical evidence.
 - For unconfirmed suspicions use: "may suggest", "could indicate", "worth ruling out".
 - Never use alarming language.
@@ -472,7 +496,12 @@ ${uploadedLabsText}
 
 Respond with valid JSON only. No markdown, no preamble:
 {
+  "summaryPoints": [
+    "3-4 short symptom or wellness-pattern bullets grounded in this assessment. No conditions."
+  ],
   "personalizedSummary": "Up to 6 sentences. Acknowledge the patient's effort, explain that the current screening looks reassuring, mention any positive patterns or low-risk context that supports that, and include a brief disclaimer that this is a screening tool.",
+  "declinedSuspicions": [],
+  "recoveryOutlook": "2-3 sentences. Keep this light and reassuring. Explain that no major fatigue signal was found and that outlook stays good if symptoms remain mild or stable, while noting when to seek follow-up if things change.",
   "insights": [],
   "nextSteps": "Up to 4 sentences focused on staying healthy, what to monitor if they are curious, and when to raise fatigue concerns with a doctor if symptoms change.",
   "doctorKitSummary": "1-2 first-person sentences the patient can use if they still want to discuss wellness with a doctor.",
@@ -486,6 +515,7 @@ Respond with valid JSON only. No markdown, no preamble:
 Rules:
 - Warm, positive tone throughout. Never create concern where none exists.
 - Do not invent conditions, red flags, or diagnostic urgency.
+- summaryPoints and recoveryOutlook are required.
 - Keep the answer lightweight when the fatigue signal is low.
 - Complete the full JSON without truncating.`;
 }

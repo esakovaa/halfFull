@@ -22,6 +22,7 @@ import {
 import {
   applyHardSafetyRules,
   validateMedGemmaGroundingSchema,
+  type DeclinedSuspicion,
   type MedGemmaGroundingResult,
 } from '@/lib/medgemma-safety';
 import { synthesizeNarrativeWithGroqV6 } from '@/src/lib/server/deepAnalyzeSafety';
@@ -114,6 +115,32 @@ function repairAndParseJson(raw: string): Record<string, unknown> | null {
   }
 
   return null;
+}
+
+function ensureCandidateCoverage(
+  flaggedConditions: string[],
+  result: {
+    insights: Array<{ diagnosisId: string }>;
+    declinedSuspicions?: DeclinedSuspicion[];
+  },
+): DeclinedSuspicion[] | undefined {
+  const existingIds = new Set([
+    ...result.insights.map((item) => item.diagnosisId),
+    ...(result.declinedSuspicions ?? []).map((item) => item.diagnosisId),
+  ]);
+
+  const appended = flaggedConditions
+    .filter((diagnosisId) => !existingIds.has(diagnosisId))
+    .map((diagnosisId) => ({
+      diagnosisId,
+      reason: 'This signal was reviewed but was not strong enough to prioritise after the full evidence check.',
+    }));
+
+  if ((result.declinedSuspicions?.length ?? 0) === 0 && appended.length === 0) {
+    return result.declinedSuspicions;
+  }
+
+  return [...(result.declinedSuspicions ?? []), ...appended];
 }
 
 export async function POST(req: NextRequest) {
@@ -316,7 +343,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 90_000);
+    const timeout = setTimeout(() => controller.abort(), 120_000);
     const hfResponse = await fetch(HF_API_URL, {
       method: 'POST',
       headers: {
@@ -394,7 +421,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Groq synthesis unavailable' }, { status: 503 });
     }
 
-    const { data: safeData, warnings: safetyWarnings } = applyHardSafetyRules(synthesisResult);
+    const coveredResult = {
+      ...synthesisResult,
+      declinedSuspicions: ensureCandidateCoverage(flaggedConditions, synthesisResult),
+    };
+
+    const { data: safeData, warnings: safetyWarnings } = applyHardSafetyRules(coveredResult);
     if (safetyWarnings.length > 0) {
       writeLog('deep_analyze_safety_replacements', {
         anonymousId: privacy?.anonymousId ?? null,

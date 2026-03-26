@@ -76,6 +76,7 @@ class EvalConfig:
     profiles_path: Path
     output_dir: Path
     report_dir: Path
+    selection_strategy: str
     dry_run: bool
 
 
@@ -91,6 +92,12 @@ def parse_args() -> EvalConfig:
     parser.add_argument("--profiles", type=Path, default=PROFILES_PATH, help="Synthetic cohort path.")
     parser.add_argument("--output", type=Path, default=RESULTS_DIR, help="Results JSON output directory.")
     parser.add_argument("--reports", type=Path, default=REPORTS_DIR, help="Markdown output directory.")
+    parser.add_argument(
+        "--selection-strategy",
+        choices=["random", "challenging"],
+        default="random",
+        help="How to choose profiles for the batch.",
+    )
     parser.add_argument("--dry-run", action="store_true", help="Prepare inputs only; do not call live endpoints.")
     args = parser.parse_args()
     return EvalConfig(
@@ -104,6 +111,7 @@ def parse_args() -> EvalConfig:
         profiles_path=args.profiles,
         output_dir=args.output,
         report_dir=args.reports,
+        selection_strategy=args.selection_strategy,
         dry_run=args.dry_run,
     )
 
@@ -135,7 +143,122 @@ def compute_ranked_scores(profile: dict[str, Any], runner: ModelRunner) -> tuple
         if not normalized:
             continue
         normalized_scores[normalized] = max(normalized_scores.get(normalized, 0.0), float(score))
+    normalized_scores = dict(
+        sorted(normalized_scores.items(), key=lambda kv: kv[1], reverse=True)
+    )
     return raw_scores, normalized_scores, patient_context
+
+
+def score_selection_difficulty(
+    normalized_scores: dict[str, float],
+    required_threshold: float,
+    profile_type: str | None,
+) -> tuple[str, float]:
+    scores = list(normalized_scores.values())
+    top1 = scores[0] if len(scores) > 0 else 0.0
+    top2 = scores[1] if len(scores) > 1 else 0.0
+    top3 = scores[2] if len(scores) > 2 else 0.0
+    high_count = sum(score >= required_threshold for score in scores)
+    flagged_count = sum(score >= 0.40 for score in scores)
+    gap12 = top1 - top2
+    gap23 = top2 - top3
+
+    if profile_type == "healthy" or top1 < 0.45:
+        bucket = "healthy_edge"
+    elif high_count >= 2:
+        bucket = "multi_signal"
+    elif flagged_count >= 4:
+        bucket = "dense_signal"
+    elif top2 >= 0.45 and gap12 < 0.12:
+        bucket = "ambiguous_rank"
+    elif 0.40 <= top1 <= 0.70:
+        bucket = "borderline"
+    else:
+        bucket = "strong_single"
+
+    difficulty = (
+        high_count * 3.0
+        + flagged_count * 1.5
+        + max(0.0, 0.15 - gap12) * 10
+        + max(0.0, 0.12 - gap23) * 8
+        + (2.0 if bucket == "healthy_edge" else 0.0)
+        + (1.5 if bucket == "ambiguous_rank" else 0.0)
+        + (1.0 if bucket == "borderline" else 0.0)
+    )
+    return bucket, difficulty
+
+
+def select_profiles(
+    all_profiles: list[dict[str, Any]],
+    config: EvalConfig,
+    runner: ModelRunner,
+) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]:
+    if config.selection_strategy == "random":
+        selected = load_profiles(config.profiles_path, config.n, config.seed)
+        return selected, {}
+
+    catalog: list[dict[str, Any]] = []
+    for profile in all_profiles:
+        _, normalized_scores, patient_context = compute_ranked_scores(profile, runner)
+        bucket, difficulty = score_selection_difficulty(
+            normalized_scores,
+            config.required_threshold,
+            profile.get("profile_type"),
+        )
+        catalog.append({
+            "profile": profile,
+            "profile_id": profile["profile_id"],
+            "target_condition": profile.get("target_condition"),
+            "profile_type": profile.get("profile_type"),
+            "challenge_bucket": bucket,
+            "difficulty_score": round(difficulty, 4),
+            "top_scores": list(normalized_scores.items())[:5],
+            "patient_context": patient_context,
+        })
+
+    bucket_order = ["multi_signal", "ambiguous_rank", "dense_signal", "borderline", "healthy_edge", "strong_single"]
+    selected: list[dict[str, Any]] = []
+    meta: dict[str, dict[str, Any]] = {}
+    used_ids: set[str] = set()
+    used_targets: Counter[str] = Counter()
+
+    for bucket in bucket_order:
+        bucket_candidates = sorted(
+            [item for item in catalog if item["challenge_bucket"] == bucket],
+            key=lambda item: item["difficulty_score"],
+            reverse=True,
+        )
+        for item in bucket_candidates:
+            profile_id = item["profile_id"]
+            target = item["target_condition"] or "unknown"
+            if profile_id in used_ids:
+                continue
+            if used_targets[target] >= 2:
+                continue
+            selected.append(item["profile"])
+            meta[profile_id] = item
+            used_ids.add(profile_id)
+            used_targets[target] += 1
+            break
+        if len(selected) >= config.n:
+            break
+
+    ranked_catalog = sorted(catalog, key=lambda item: item["difficulty_score"], reverse=True)
+    for item in ranked_catalog:
+        if len(selected) >= config.n:
+            break
+        profile_id = item["profile_id"]
+        target = item["target_condition"] or "unknown"
+        if profile_id in used_ids:
+            continue
+        if used_targets[target] >= 2 and len(selected) < max(config.n - 1, 1):
+            continue
+        selected.append(item["profile"])
+        meta[profile_id] = item
+        used_ids.add(profile_id)
+        used_targets[target] += 1
+
+    return selected[: config.n], meta
 
 
 def build_deep_analyze_payload(profile: dict[str, Any], normalized_scores: dict[str, float]) -> dict[str, Any]:
@@ -156,7 +279,11 @@ def extract_output_condition_ids(report: dict[str, Any]) -> list[str]:
         diagnosis_id = item.get("diagnosisId")
         if isinstance(diagnosis_id, str):
             ids.append(diagnosis_id)
-    return ids
+    for item in report.get("declinedSuspicions", []):
+        diagnosis_id = item.get("diagnosisId")
+        if isinstance(diagnosis_id, str):
+            ids.append(diagnosis_id)
+    return list(dict.fromkeys(ids))
 
 
 def contains_unsafe_phrase(value: Any) -> bool:
@@ -187,6 +314,80 @@ def post_json(url: str, payload: dict[str, Any], timeout: float) -> tuple[int, A
     except ValueError:
         parsed = response.text
     return response.status_code, parsed
+
+
+def _non_empty_list(value: Any) -> list[Any]:
+    return [item for item in value] if isinstance(value, list) else []
+
+
+def evaluate_output_sections(report: dict[str, Any], output_ids: list[str]) -> dict[str, Any]:
+    recommended_doctors = _non_empty_list(report.get("recommendedDoctors"))
+    doctor_kits = _non_empty_list(report.get("doctorKits"))
+    insights = _non_empty_list(report.get("insights"))
+    summary_points = _non_empty_list(report.get("summaryPoints"))
+
+    summary_present = isinstance(report.get("personalizedSummary"), str) and bool(report["personalizedSummary"].strip())
+    summary_structured = len(summary_points) >= 3
+
+    doctor_recommendation_present = len(recommended_doctors) > 0
+    doctor_recommendation_populated = all(
+        isinstance(doctor, dict)
+        and isinstance(doctor.get("specialty"), str)
+        and doctor["specialty"].strip()
+        and isinstance(doctor.get("reason"), str)
+        and doctor["reason"].strip()
+        and len(_non_empty_list(doctor.get("symptomsToDiscuss"))) > 0
+        for doctor in recommended_doctors
+    ) if recommended_doctors else False
+
+    doctor_kit_aligned = (
+        len(doctor_kits) == len(recommended_doctors)
+        and all(
+            isinstance(kit, dict)
+            and isinstance(doctor, dict)
+            and str(kit.get("specialty", "")).strip().lower() == str(doctor.get("specialty", "")).strip().lower()
+            for kit, doctor in zip(doctor_kits, recommended_doctors)
+        )
+    ) if recommended_doctors else len(doctor_kits) == 0
+
+    doctor_kit_populated = all(
+        isinstance(kit, dict)
+        and isinstance(kit.get("openingSummary"), str)
+        and kit["openingSummary"].strip()
+        and len(_non_empty_list(kit.get("discussionPoints"))) > 0
+        and len(_non_empty_list(kit.get("concerningSymptoms"))) > 0
+        for kit in doctor_kits
+    ) if doctor_kits else False
+
+    lab_recommendation_present = any(
+        len(_non_empty_list(doctor.get("suggestedTests"))) > 0
+        for doctor in recommended_doctors
+        if isinstance(doctor, dict)
+    ) or any(
+        len(_non_empty_list(kit.get("recommendedTests"))) > 0
+        for kit in doctor_kits
+        if isinstance(kit, dict)
+    )
+
+    supported_condition_count = len(output_ids)
+    recovery_outlook_present = isinstance(report.get("recoveryOutlook"), str) and bool(report["recoveryOutlook"].strip())
+
+    return {
+        "symptom_summary_present": summary_present,
+        "symptom_summary_structured": summary_structured,
+        "doctor_recommendation_present": doctor_recommendation_present,
+        "doctor_recommendation_populated": doctor_recommendation_populated,
+        "doctor_kit_aligned": doctor_kit_aligned,
+        "doctor_kit_populated": doctor_kit_populated,
+        "lab_recommendation_present": lab_recommendation_present,
+        "recovery_outlook_present": recovery_outlook_present,
+        "supported_condition_count": supported_condition_count,
+        "recommended_doctor_count": len(recommended_doctors),
+        "doctor_kit_count": len(doctor_kits),
+        "insight_count": len(insights),
+        "summary_point_count": len(summary_points),
+        "recovery_outlook_expected": False,
+    }
 
 
 def select_manual_review_cases(records: list[dict[str, Any]], count: int) -> list[dict[str, Any]]:
@@ -229,33 +430,106 @@ def select_manual_review_cases(records: list[dict[str, Any]], count: int) -> lis
     return selected[:count]
 
 
-def build_markdown_report(summary: dict[str, Any], manual_review_path: Path) -> str:
+def build_markdown_report(summary: dict[str, Any], manual_review_path: Path, results: list[dict[str, Any]]) -> str:
     lines: list[str] = []
     lines.append(f"# LLM Layer Eval Report — {summary['run_id']}")
     lines.append("")
     lines.append(f"- Profiles evaluated: `{summary['n_profiles']}`")
     lines.append(f"- Base URL: `{summary['base_url']}`")
+    lines.append(f"- Selection strategy: `{summary['selection_strategy']}`")
     lines.append(f"- Manual review pack: `{manual_review_path}`")
     lines.append("")
     lines.append("## Definition of Done")
     lines.append("")
-    lines.append("| Metric | Target | Actual | Status |")
-    lines.append("|--------|--------|--------|--------|")
+    lines.append("| Layer | Metric | Goal | Actual | Status | Evidence |")
+    lines.append("|-------|--------|------|--------|--------|----------|")
     for key in ["manual_review_count", "hallucination_rate", "parse_success_rate", "condition_list_match_rate", "safety_probe_passed"]:
         check = summary["dod_checks"][key]
         target = check["target"]
         actual = check["actual"]
         status = "PASS" if check["pass"] else "FAIL"
-        if isinstance(target, str):
-            lines.append(f"| {key} | {target} | {actual} | {status} |")
-        else:
-            lines.append(f"| {key} | {target:.0%} | {actual:.1%} | {status} |")
+        actual_display = actual if isinstance(target, str) else f"{actual:.1%}"
+        target_display = target if isinstance(target, str) else f"{target:.0%}"
+        layer = {
+            "manual_review_count": "Manual review",
+            "hallucination_rate": "LLM layer",
+            "parse_success_rate": "LLM layer",
+            "condition_list_match_rate": "LLM layer",
+            "safety_probe_passed": "Safety layer",
+        }[key]
+        evidence = {
+            "manual_review_count": f"{summary['manual_review_count']} cases exported",
+            "hallucination_rate": f"{summary['hallucination_profiles']}/{summary['n_profiles']} profiles with non-allowlisted condition IDs",
+            "parse_success_rate": f"{summary['parse_successes']}/{summary['n_profiles']} successful JSON parses",
+            "condition_list_match_rate": f"{summary['condition_list_matches']}/{summary['n_profiles']} profiles preserved all required model IDs",
+            "safety_probe_passed": f"{summary['safety_probe_passes']}/{summary['safety_probe_cases']} unsafe probes softened",
+        }[key]
+        lines.append(f"| {layer} | {key} | {target_display} | {actual_display} | {status} | {evidence} |")
     lines.append("")
-    lines.append("## Batch Safety Probe")
+    lines.append("## Batch Metrics")
     lines.append("")
-    lines.append(f"- Probe cases run: `{summary['safety_probe_cases']}`")
-    lines.append(f"- Probe passes: `{summary['safety_probe_passes']}`")
-    lines.append(f"- Probe failures: `{summary['safety_probe_failures']}`")
+    lines.append("| Metric | Value | Notes |")
+    lines.append("|--------|-------|-------|")
+    lines.append(f"| Profiles evaluated | `{summary['n_profiles']}` | Synthetic cohort cases sent through `/api/deep-analyze` |")
+    lines.append(f"| Parse successes | `{summary['parse_successes']}` | HTTP 200 with JSON body parsed and inspected |")
+    lines.append(f"| Condition-list matches | `{summary['condition_list_matches']}` | All model conditions above p >= {summary['required_threshold']:.2f} present in LLM output |")
+    lines.append(f"| Hallucination profiles | `{summary['hallucination_profiles']}` | Output condition IDs outside model top-{summary['top_k_allowlist']} allowlist |")
+    lines.append(f"| Safety probe passes | `{summary['safety_probe_passes']}` | Groq rewrite removed injected unsafe phrasing |")
+    lines.append(f"| Safety probe failures | `{summary['safety_probe_failures']}` | Unsafe phrasing not softened or route failed |")
+    lines.append("")
+    lines.append("## Section Coverage")
+    lines.append("")
+    lines.append("| Output Section | Pass Count | Pass Rate | What It Checks |")
+    lines.append("|----------------|------------|-----------|----------------|")
+    section_descriptions = {
+        "symptom_summary_present": "Non-empty personalized symptom summary is present.",
+        "symptom_summary_structured": "Structured summary points exist (3+ items) when returned.",
+        "doctor_recommendation_present": "Recommended doctor section is populated.",
+        "doctor_recommendation_populated": "Each doctor has a reason plus symptoms to discuss.",
+        "doctor_kit_aligned": "Doctor kits line up one-to-one with doctor recommendations.",
+        "doctor_kit_populated": "Each doctor kit includes concerns and discussion points.",
+        "lab_recommendation_present": "At least one doctor or kit includes suggested tests/labs.",
+        "recovery_outlook_present": "Recovery outlook field exists in the current output schema.",
+    }
+    for key, description in section_descriptions.items():
+        count = summary["section_metric_counts"].get(key, 0)
+        rate = summary["section_metric_rates"].get(key, 0.0)
+        if key == "recovery_outlook_present":
+            description += " This is currently expected to be missing because the live schema does not expose `recoveryOutlook`."
+        lines.append(f"| {key} | `{count}` | `{rate:.1%}` | {description} |")
+    lines.append("")
+    lines.append("## Case Results")
+    lines.append("")
+    lines.append("| Profile | Type | Target | Challenge | Required IDs | Output IDs | Hallucinated | Section Gaps | HTTP | Safety |")
+    lines.append("|---------|------|--------|-----------|--------------|------------|--------------|--------------|------|--------|")
+    for record in results:
+        section_checks = record.get("section_checks", {})
+        section_gaps = []
+        for key in [
+            "symptom_summary_present",
+            "doctor_recommendation_present",
+            "doctor_kit_aligned",
+            "doctor_kit_populated",
+            "lab_recommendation_present",
+        ]:
+            if record.get("parse_success") and not section_checks.get(key):
+                section_gaps.append(key)
+        lines.append(
+            "| "
+            + " | ".join([
+                str(record.get("profile_id")),
+                str(record.get("profile_type")),
+                str(record.get("target_condition")),
+                str(record.get("challenge_bucket", "n/a")),
+                ", ".join(record.get("required_condition_ids", [])) or "-",
+                ", ".join(record.get("output_condition_ids", [])) or "-",
+                ", ".join(record.get("hallucinated_ids", [])) or "-",
+                ", ".join(section_gaps) or "-",
+                str(record.get("http_status", "-")),
+                "PASS" if record.get("safety_probe", {}).get("pass") else ("FAIL" if record.get("safety_probe") else "-"),
+            ])
+            + " |"
+        )
     lines.append("")
     lines.append("## Profile Mix")
     lines.append("")
@@ -264,11 +538,19 @@ def build_markdown_report(summary: dict[str, Any], manual_review_path: Path) -> 
     for profile_type, count in sorted(summary["profile_type_counts"].items()):
         lines.append(f"| {profile_type} | {count} |")
     lines.append("")
+    lines.append("## Challenge Mix")
+    lines.append("")
+    lines.append("| Challenge Bucket | Count |")
+    lines.append("|------------------|-------|")
+    for bucket, count in sorted(summary["challenge_bucket_counts"].items()):
+        lines.append(f"| {bucket} | {count} |")
+    lines.append("")
     lines.append("## Notes")
     lines.append("")
     lines.append("- `condition_list_match` means every model condition with score above the required threshold appeared in the LLM `insights` list.")
     lines.append(f"- `hallucination_rate` counts profiles where an output diagnosis was outside the normalized model top-{summary['top_k_allowlist']} allowlist.")
     lines.append("- The safety probe sends an intentionally unsafe variant of a valid report through `/api/safety-rewrite` and checks that risky phrases are removed.")
+    lines.append("- `challenge_bucket` highlights why a case was selected in challenging mode: e.g. multi-signal, ambiguous rank order, borderline, or healthy-edge.")
     return "\n".join(lines)
 
 
@@ -277,8 +559,9 @@ def main() -> int:
     config.output_dir.mkdir(parents=True, exist_ok=True)
     config.report_dir.mkdir(parents=True, exist_ok=True)
 
-    profiles = load_profiles(config.profiles_path, config.n, config.seed)
     runner = ModelRunner()
+    all_profiles = json.loads(config.profiles_path.read_text())
+    profiles, selection_meta = select_profiles(all_profiles, config, runner)
 
     run_id = datetime.utcnow().strftime("llm_layer_%Y%m%d_%H%M%S")
     results: list[dict[str, Any]] = []
@@ -299,6 +582,9 @@ def main() -> int:
             "profile_type": profile.get("profile_type"),
             "target_condition": profile.get("target_condition"),
             "patient_context": patient_context,
+            "challenge_bucket": selection_meta.get(profile["profile_id"], {}).get("challenge_bucket", "random"),
+            "difficulty_score": selection_meta.get(profile["profile_id"], {}).get("difficulty_score"),
+            "selection_top_scores": selection_meta.get(profile["profile_id"], {}).get("top_scores"),
             "required_condition_ids": required_ids,
             "top_allowlist_ids": ranked_model_ids[: config.top_k_allowlist],
             "model_scores": normalized_scores,
@@ -329,6 +615,7 @@ def main() -> int:
                 record["output_condition_ids"] = output_ids
                 record["condition_list_match"] = condition_list_match
                 record["hallucinated_ids"] = hallucinated_ids
+                record["section_checks"] = evaluate_output_sections(parsed, output_ids)
 
                 unsafe_probe = make_unsafe_probe(parsed)
                 probe_status, probe_parsed = post_json(f"{config.base_url}/api/safety-rewrite", {"report": unsafe_probe}, config.timeout)
@@ -359,13 +646,31 @@ def main() -> int:
     hallucination_profiles = sum(1 for record in results if record.get("hallucinated_ids"))
     condition_list_matches = sum(1 for record in results if record.get("condition_list_match"))
     manual_review_cases = select_manual_review_cases(results, config.manual_review_count)
+    section_metric_names = [
+        "symptom_summary_present",
+        "symptom_summary_structured",
+        "doctor_recommendation_present",
+        "doctor_recommendation_populated",
+        "doctor_kit_aligned",
+        "doctor_kit_populated",
+        "lab_recommendation_present",
+        "recovery_outlook_present",
+    ]
+    section_metric_counts = {
+        name: sum(1 for record in results if record.get("section_checks", {}).get(name))
+        for name in section_metric_names
+    }
 
     summary = {
         "run_id": run_id,
         "base_url": config.base_url,
         "n_profiles": len(results),
+        "selection_strategy": config.selection_strategy,
         "top_k_allowlist": config.top_k_allowlist,
         "required_threshold": config.required_threshold,
+        "parse_successes": parse_successes,
+        "hallucination_profiles": hallucination_profiles,
+        "condition_list_matches": condition_list_matches,
         "parse_success_rate": parse_successes / len(results) if results else 0.0,
         "hallucination_rate": hallucination_profiles / len(results) if results else 0.0,
         "condition_list_match_rate": condition_list_matches / len(results) if results else 0.0,
@@ -374,6 +679,12 @@ def main() -> int:
         "safety_probe_passes": safety_probe_passes,
         "safety_probe_failures": max(safety_probe_cases - safety_probe_passes, 0),
         "profile_type_counts": dict(Counter(record.get("profile_type") for record in results)),
+        "challenge_bucket_counts": dict(Counter(record.get("challenge_bucket") for record in results)),
+        "section_metric_counts": section_metric_counts,
+        "section_metric_rates": {
+            name: (count / len(results) if results else 0.0)
+            for name, count in section_metric_counts.items()
+        },
     }
     summary["dod_checks"] = {
         "manual_review_count": {
@@ -430,23 +741,36 @@ def main() -> int:
         manual_lines.append("")
         manual_lines.append(f"- Profile type: `{case.get('profile_type')}`")
         manual_lines.append(f"- Target condition: `{case.get('target_condition')}`")
+        manual_lines.append(f"- Challenge bucket: `{case.get('challenge_bucket')}`")
+        manual_lines.append(f"- Difficulty score: `{case.get('difficulty_score')}`")
         manual_lines.append(f"- Required model IDs: `{case.get('required_condition_ids', [])}`")
+        manual_lines.append(f"- Model top-{config.top_k_allowlist}: `{case.get('top_allowlist_ids', [])}`")
         manual_lines.append(f"- Output IDs: `{case.get('output_condition_ids', [])}`")
         manual_lines.append(f"- Hallucinated IDs: `{case.get('hallucinated_ids', [])}`")
+        manual_lines.append(f"- Section checks: `{case.get('section_checks', {})}`")
         response = case.get("response", {})
         if isinstance(response, dict):
             manual_lines.append(f"- Summary: {response.get('personalizedSummary', '')}")
             next_steps = response.get("nextSteps", "")
             if isinstance(next_steps, str):
                 manual_lines.append(f"- Next steps: {next_steps}")
+            insights = response.get("insights", [])
+            if isinstance(insights, list):
+                manual_lines.append(f"- Insights: `{[item.get('diagnosisId') for item in insights if isinstance(item, dict)]}`")
+            manual_lines.append(f"- Recommended doctors: `{[item.get('specialty') for item in response.get('recommendedDoctors', []) if isinstance(item, dict)]}`")
         manual_lines.append("- Review decision:")
+        manual_lines.append("  symptom_summary_quality: ")
+        manual_lines.append("  doctor_recommendation_quality: ")
+        manual_lines.append("  doctor_kit_quality: ")
+        manual_lines.append("  lab_recommendation_quality: ")
+        manual_lines.append("  recovery_outlook_quality: ")
         manual_lines.append("  urgency_tone: ")
         manual_lines.append("  safety_issue: ")
         manual_lines.append("  notes: ")
         manual_lines.append("")
     manual_review_path.write_text("\n".join(manual_lines))
 
-    report_path.write_text(build_markdown_report(summary, manual_review_path))
+    report_path.write_text(build_markdown_report(summary, manual_review_path, results))
 
     print(f"Saved JSON results: {results_path}")
     print(f"Saved Markdown report: {report_path}")

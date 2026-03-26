@@ -19,8 +19,8 @@ import { computeResults, buildDiagnosesFromML } from '@/src/lib/mockResults';
 
 import {
   getInsightForDiagnosis,
-  readStoredBayesianDetails,
   readStoredBayesianScores,
+  readStoredBayesianDetails,
   readStoredConfirmedConditions,
   readStoredDeepResult,
   readStoredMLScores,
@@ -60,19 +60,32 @@ const diagnoses = effectiveScores
   ? buildDiagnosesFromML(effectiveScores)
   : computeResults(answers).diagnoses;
 
+  const mlScores = hydrated ? readStoredMLScores() : null;
+  const bayesianDetails = hydrated ? readStoredBayesianDetails() : null;
+  const bayesianScores = hydrated ? readStoredBayesianScores() : null;
+  // Bayesian scores reflect clarification answers, so prefer them when present.
+  // Fall back to raw ML scores, then to the rule-based results.
+  const effectiveScores = bayesianScores ?? mlScores;
+  const confirmedConditions = hydrated ? (readStoredConfirmedConditions() ?? []) : [];
+  const diagnoses = effectiveScores
+    ? buildDiagnosesFromML(effectiveScores)
+    : computeResults(answers).diagnoses;
   const biomarkers = extractBiomarkerSnapshot(answers);
 
-  // Detect empty-result scenarios: ML ran but no condition crossed the display threshold.
+  // Detect empty-result scenarios after ML/Bayesian scoring.
   // Distinguish "likely healthy" (all scores very low) from "uncertain cause" (some signal
   // present but below threshold — e.g. after clarification questions reduced probabilities).
-  const mlRanButEmpty = effectiveScores !== null && diagnoses.length === 0;
-  const maxScore = effectiveScores ? Math.max(0, ...Object.values(effectiveScores)) : 0;
-  const isLikelyHealthy = mlRanButEmpty && maxScore < 0.20;
+const mlRanButEmpty = effectiveScores !== null && diagnoses.length === 0;
+const maxScore = effectiveScores ? Math.max(0, ...Object.values(effectiveScores)) : 0;
+const isLikelyHealthy = mlRanButEmpty && maxScore < 0.20;
 
-  // Override the rule-based summaryLine when ML ran but found nothing.
-  const effectiveSummaryLine = mlRanButEmpty
-    ? (isLikelyHealthy
-      ? 'No concerning energy patterns found — your profile looks reassuring.'
+// Override the rule-based summaryLine when ML ran but found nothing.
+const effectiveSummaryLine = mlRanButEmpty
+  ? (isLikelyHealthy
+    ? 'No concerning energy patterns found — your profile looks reassuring.'
+    : 'Your assessment shows some low-level signals, but nothing points to a specific cause.')
+  : summaryLine;
+
       : 'Your assessment shows some low-level signals, but nothing points to a specific cause.')
     : summaryLine;
 
@@ -603,6 +616,17 @@ const diagnoses = effectiveScores
             </div>
           )}
 
+          {deep?.recoveryOutlook && (
+            <div className="section-card px-5 py-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="pill-tag bg-[var(--color-card-muted)] text-[var(--color-ink)]">
+                  Recovery outlook
+                </span>
+              </div>
+              <p className="text-sm leading-6 text-[var(--color-ink)]">{deep.recoveryOutlook}</p>
+            </div>
+          )}
+
           {/* ── Energy spectrum ───────────────────────────────────────────── */}
           <EnergySpectrum currentPct={currentPct} projectedPct={projectedPct} />
 
@@ -620,57 +644,57 @@ const diagnoses = effectiveScores
                     : 'Your answers show some fatigue signals, but they don\'t point clearly to a specific cause.'}
               </p>
             </div>
-{diagnoses.length > 0 ? (
-  diagnoses.map((d, i) => (
-    <DiagnosisCard
-      key={d.id}
-      diagnosis={d}
-      rank={i + 1}
-      personalNote={getInsightForDiagnosis(deep, d.id)}
-      confidence={{
-        tier: diagnosisMeta[d.id]?.confidence.tier ?? 'low',
-        summary: diagnosisMeta[d.id]?.confidence.summary ?? 'Limited evidence available.',
-      }}
-      urgency={{
-        level: diagnosisMeta[d.id]?.urgency.level ?? 'routine',
-        summary: diagnosisMeta[d.id]?.urgency.reasons[0] ?? 'Routine follow-up is appropriate.',
-      }}
-      reasoningTrace={diagnosisReasoning[d.id]}
-    />
-  ))
-) : mlRanButEmpty ? (
-  <div className="rounded-[1.6rem] bg-[var(--color-card)] px-5 py-6 shadow-[0_14px_30px_rgba(86,98,145,0.1)]">
-    {isLikelyHealthy ? (
-      <>
-        <p className="mb-3 text-4xl">✅</p>
-        <h3 className="mb-2 text-lg font-bold tracking-[-0.03em] text-[var(--color-ink)]">
-          No concerning patterns detected
-        </h3>
-        <p className="text-sm leading-6 text-[var(--color-ink-soft)]">
-          Based on your answers, none of the 11 health models identified a likely underlying cause for fatigue. This is a reassuring result.
-        </p>
-        <p className="mt-3 text-sm leading-6 text-[var(--color-ink-soft)]">
-          If you do experience fatigue in daily life, a routine check-up with your GP is still a sensible step - some causes only become visible through blood tests.
-        </p>
-      </>
-    ) : (
-      <>
-        <p className="mb-3 text-4xl">🔍</p>
-        <h3 className="mb-2 text-lg font-bold tracking-[-0.03em] text-[var(--color-ink)]">
-          No specific cause identified
-        </h3>
-        <p className="text-sm leading-6 text-[var(--color-ink-soft)]">
-          Your answers contain some energy-related signals, but after the full assessment - including clarification questions - none of the 11 models reached the threshold for a confident finding.
-        </p>
-        <p className="mt-3 text-sm leading-6 text-[var(--color-ink-soft)]">
-          This can happen when fatigue has multiple small contributing factors, or when key lab values (which were not uploaded) would be needed to confirm a pattern. A GP visit with targeted bloodwork is the recommended next step.
-        </p>
-      </>
-    )}
-  </div>
-) : null}
 
-            
+                        {diagnoses.length > 0 ? (
+              diagnoses.map((d, i) => (
+                <DiagnosisCard
+                  key={d.id}
+                  diagnosis={d}
+                  rank={i + 1}
+                  personalNote={getInsightForDiagnosis(deep, d.id)}
+                  confidence={{
+                    tier: diagnosisMeta[d.id]?.confidence.tier ?? 'low',
+                    summary: diagnosisMeta[d.id]?.confidence.summary ?? 'Limited evidence available.',
+                  }}
+                  urgency={{
+                    level: diagnosisMeta[d.id]?.urgency.level ?? 'routine',
+                    summary: diagnosisMeta[d.id]?.urgency.reasons[0] ?? 'Routine follow-up is appropriate.',
+                  }}
+                  reasoningTrace={diagnosisReasoning[d.id]}
+                />
+              ))
+            ) : mlRanButEmpty ? (
+              <div className="rounded-[1.6rem] bg-[var(--color-card)] px-5 py-6 shadow-[0_14px_30px_rgba(86,98,145,0.1)]">
+                {isLikelyHealthy ? (
+                  <>
+                    <p className="mb-3 text-4xl">✅</p>
+                    <h3 className="mb-2 text-lg font-bold tracking-[-0.03em] text-[var(--color-ink)]">
+                      No concerning patterns detected
+                    </h3>
+                    <p className="text-sm leading-6 text-[var(--color-ink-soft)]">
+                      Based on your answers, none of the 11 health models identified a likely underlying cause for fatigue. This is a reassuring result.
+                    </p>
+                    <p className="mt-3 text-sm leading-6 text-[var(--color-ink-soft)]">
+                      If you do experience fatigue in daily life, a routine check-up with your GP is still a sensible step - some causes only become visible through blood tests.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="mb-3 text-4xl">🔍</p>
+                    <h3 className="mb-2 text-lg font-bold tracking-[-0.03em] text-[var(--color-ink)]">
+                      No specific cause identified
+                    </h3>
+                    <p className="text-sm leading-6 text-[var(--color-ink-soft)]">
+                      Your answers contain some energy-related signals, but after the full assessment - including clarification questions - none of the 11 models reached the threshold for a confident finding.
+                    </p>
+                    <p className="mt-3 text-sm leading-6 text-[var(--color-ink-soft)]">
+                      This can happen when fatigue has multiple small contributing factors, or when key lab values (which were not uploaded) would be needed to confirm a pattern. A GP visit with targeted bloodwork is the recommended next step.
+                    </p>
+                  </>
+                )}
+              </div>
+            ) : null}
+
           </div>
 
           {/* ── Next steps + doctor cards ─────────────────────────────────── */}

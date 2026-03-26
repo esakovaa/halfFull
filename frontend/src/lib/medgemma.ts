@@ -10,6 +10,12 @@ export type AiResultSource = 'live' | 'mock' | 'offline';
 export interface MedGemmaInsight {
   diagnosisId: string;
   personalNote: string;
+  confidence?: 'probable' | 'possible' | 'worth_ruling_out';
+}
+
+export interface DeclinedSuspicion {
+  diagnosisId: string;
+  reason: string;
 }
 
 export interface RecommendedDoctor {
@@ -64,6 +70,10 @@ export interface KnnSignalsResult {
 export interface DeepMedGemmaResult extends MedGemmaResult {
   /** Structured bullet points for the "Your results" summary — renders as a bullet list */
   summaryPoints?: string[];
+  /** Conditions that were considered but not supported after evidence review */
+  declinedSuspicions?: DeclinedSuspicion[];
+  /** Realistic expectation-setting about how quickly clarity or improvement may come */
+  recoveryOutlook?: string;
   /** AI-generated symptom narrative to open the doctor conversation */
   doctorKitSummary?: string;
   /** AI-generated questions to ask the doctor (replaces rule-based when present) */
@@ -473,7 +483,7 @@ export async function getDeepAnalysisWithFallback(
   rawMlScores?: Record<string, number>,
   clarificationQA?: BayesianClarificationRecord,
   confirmedConditions?: string[],
-  timeoutMs = 85000  // matches the 90s abort controller in /api/deep-analyze
+  timeoutMs = 150000  // allow for Vercel route time + MedGemma grounding + Groq synthesis
 ): Promise<DeepMedGemmaResult> {
   const mode = getConfiguredAiMode();
 
