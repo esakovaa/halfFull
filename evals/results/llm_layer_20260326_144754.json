@@ -1,0 +1,464 @@
+{
+  "summary": {
+    "run_id": "llm_layer_20260326_144754",
+    "base_url": "http://127.0.0.1:3000",
+    "n_profiles": 8,
+    "top_k_allowlist": 5,
+    "required_threshold": 0.65,
+    "parse_success_rate": 0.0,
+    "hallucination_rate": 0.0,
+    "condition_list_match_rate": 0.0,
+    "manual_review_count": 0,
+    "safety_probe_cases": 0,
+    "safety_probe_passes": 0,
+    "safety_probe_failures": 0,
+    "profile_type_counts": {
+      "positive": 3,
+      "borderline": 3,
+      "negative": 1,
+      "healthy": 1
+    },
+    "dod_checks": {
+      "manual_review_count": {
+        "target": ">= 10",
+        "actual": 0,
+        "pass": false
+      },
+      "hallucination_rate": {
+        "target": 0.05,
+        "actual": 0.0,
+        "pass": true
+      },
+      "parse_success_rate": {
+        "target": 0.95,
+        "actual": 0.0,
+        "pass": false
+      },
+      "condition_list_match_rate": {
+        "target": 0.95,
+        "actual": 0.0,
+        "pass": false
+      },
+      "safety_probe_passed": {
+        "target": ">= 1 pass per batch",
+        "actual": 0,
+        "pass": false
+      }
+    },
+    "dod_pass": false
+  },
+  "results": [
+    {
+      "profile_id": "SYN-THY00015",
+      "profile_type": "positive",
+      "target_condition": "hypothyroidism",
+      "patient_context": {
+        "gender": "Female",
+        "age_years": 41.0
+      },
+      "required_condition_ids": [
+        "sleep_disorder",
+        "anemia",
+        "thyroid"
+      ],
+      "top_allowlist_ids": [
+        "sleep_disorder",
+        "anemia",
+        "thyroid",
+        "electrolytes",
+        "kidney"
+      ],
+      "model_scores": {
+        "sleep_disorder": 0.9311,
+        "anemia": 0.8112,
+        "thyroid": 0.8369,
+        "electrolytes": 0.5804,
+        "kidney": 0.5573,
+        "iron_deficiency": 0.146,
+        "prediabetes": 0.5857,
+        "perimenopause": 0.2888,
+        "liver": 0.0472,
+        "hepatitis": 0.0049,
+        "inflammation": 0.1594
+      },
+      "raw_model_scores": {
+        "hidden_inflammation": 0.1594,
+        "sleep_disorder": 0.9311,
+        "thyroid": 0.8369,
+        "electrolyte_imbalance": 0.5804,
+        "kidney": 0.5573,
+        "anemia": 0.8112,
+        "prediabetes": 0.5857,
+        "perimenopause": 0.2888,
+        "hepatitis_bc": 0.0049,
+        "iron_deficiency": 0.146,
+        "liver": 0.0472
+      },
+      "max_required_score": 0.9311,
+      "parse_success": false,
+      "condition_list_match": false,
+      "hallucinated_ids": [],
+      "error": "HTTPConnectionPool(host='127.0.0.1', port=3000): Max retries exceeded with url: /api/deep-analyze (Caused by NewConnectionError(\"HTTPConnection(host='127.0.0.1', port=3000): Failed to establish a new connection: [Errno 1] Operation not permitted\"))"
+    },
+    {
+      "profile_id": "SYN-MNP00026",
+      "profile_type": "borderline",
+      "target_condition": "menopause",
+      "patient_context": {
+        "gender": "Female",
+        "age_years": 52.0
+      },
+      "required_condition_ids": [
+        "perimenopause",
+        "thyroid"
+      ],
+      "top_allowlist_ids": [
+        "perimenopause",
+        "inflammation",
+        "thyroid",
+        "iron_deficiency",
+        "liver"
+      ],
+      "model_scores": {
+        "perimenopause": 0.9821,
+        "inflammation": 0.5391,
+        "thyroid": 0.6982,
+        "iron_deficiency": 0.0661,
+        "liver": 0.05,
+        "hepatitis": 0.0195,
+        "electrolytes": 0.452,
+        "anemia": 0.4111,
+        "kidney": 0.2826,
+        "prediabetes": 0.4502,
+        "sleep_disorder": 0.6389
+      },
+      "raw_model_scores": {
+        "hidden_inflammation": 0.5391,
+        "thyroid": 0.6982,
+        "anemia": 0.4111,
+        "electrolyte_imbalance": 0.452,
+        "perimenopause": 0.9821,
+        "prediabetes": 0.4502,
+        "kidney": 0.2826,
+        "sleep_disorder": 0.6389,
+        "iron_deficiency": 0.0661,
+        "liver": 0.05,
+        "hepatitis_bc": 0.0195
+      },
+      "max_required_score": 0.9821,
+      "parse_success": false,
+      "condition_list_match": false,
+      "hallucinated_ids": [],
+      "error": "HTTPConnectionPool(host='127.0.0.1', port=3000): Max retries exceeded with url: /api/deep-analyze (Caused by NewConnectionError(\"HTTPConnection(host='127.0.0.1', port=3000): Failed to establish a new connection: [Errno 1] Operation not permitted\"))"
+    },
+    {
+      "profile_id": "SYN-ANM00032",
+      "profile_type": "borderline",
+      "target_condition": "anemia",
+      "patient_context": {
+        "gender": "Female",
+        "age_years": 50.0
+      },
+      "required_condition_ids": [
+        "perimenopause",
+        "sleep_disorder",
+        "thyroid"
+      ],
+      "top_allowlist_ids": [
+        "perimenopause",
+        "anemia",
+        "sleep_disorder",
+        "thyroid",
+        "iron_deficiency"
+      ],
+      "model_scores": {
+        "perimenopause": 0.9326,
+        "anemia": 0.605,
+        "sleep_disorder": 0.807,
+        "thyroid": 0.6946,
+        "iron_deficiency": 0.0541,
+        "prediabetes": 0.568,
+        "electrolytes": 0.4933,
+        "liver": 0.0461,
+        "hepatitis": 0.0145,
+        "inflammation": 0.1352,
+        "kidney": 0.3247
+      },
+      "raw_model_scores": {
+        "kidney": 0.3247,
+        "electrolyte_imbalance": 0.4933,
+        "perimenopause": 0.9326,
+        "thyroid": 0.6946,
+        "anemia": 0.605,
+        "hidden_inflammation": 0.1352,
+        "prediabetes": 0.568,
+        "sleep_disorder": 0.807,
+        "liver": 0.0461,
+        "iron_deficiency": 0.0541,
+        "hepatitis_bc": 0.0145
+      },
+      "max_required_score": 0.9326,
+      "parse_success": false,
+      "condition_list_match": false,
+      "hallucinated_ids": [],
+      "error": "HTTPConnectionPool(host='127.0.0.1', port=3000): Max retries exceeded with url: /api/deep-analyze (Caused by NewConnectionError(\"HTTPConnection(host='127.0.0.1', port=3000): Failed to establish a new connection: [Errno 1] Operation not permitted\"))"
+    },
+    {
+      "profile_id": "SYN-ANM00001",
+      "profile_type": "positive",
+      "target_condition": "anemia",
+      "patient_context": {
+        "gender": "Male",
+        "age_years": 34.0
+      },
+      "required_condition_ids": [
+        "sleep_disorder"
+      ],
+      "top_allowlist_ids": [
+        "sleep_disorder",
+        "inflammation",
+        "kidney",
+        "iron_deficiency",
+        "prediabetes"
+      ],
+      "model_scores": {
+        "sleep_disorder": 0.9383,
+        "inflammation": 0.5463,
+        "kidney": 0.6044,
+        "iron_deficiency": 0.146,
+        "prediabetes": 0.5418,
+        "liver": 0.0369,
+        "hepatitis": 0.0064,
+        "electrolytes": 0.4618,
+        "anemia": 0.3883,
+        "perimenopause": 0.0,
+        "thyroid": 0.4863
+      },
+      "raw_model_scores": {
+        "perimenopause": 0.0,
+        "anemia": 0.3883,
+        "prediabetes": 0.5418,
+        "kidney": 0.6044,
+        "sleep_disorder": 0.9383,
+        "thyroid": 0.4863,
+        "hidden_inflammation": 0.5463,
+        "electrolyte_imbalance": 0.4618,
+        "iron_deficiency": 0.146,
+        "liver": 0.0369,
+        "hepatitis_bc": 0.0064
+      },
+      "max_required_score": 0.9383,
+      "parse_success": false,
+      "condition_list_match": false,
+      "hallucinated_ids": [],
+      "error": "HTTPConnectionPool(host='127.0.0.1', port=3000): Max retries exceeded with url: /api/deep-analyze (Caused by NewConnectionError(\"HTTPConnection(host='127.0.0.1', port=3000): Failed to establish a new connection: [Errno 1] Operation not permitted\"))"
+    },
+    {
+      "profile_id": "SYN-SLP00029",
+      "profile_type": "borderline",
+      "target_condition": "sleep_disorder",
+      "patient_context": {
+        "gender": "Female",
+        "age_years": 26.0
+      },
+      "required_condition_ids": [
+        "anemia",
+        "sleep_disorder"
+      ],
+      "top_allowlist_ids": [
+        "anemia",
+        "sleep_disorder",
+        "inflammation",
+        "iron_deficiency",
+        "hepatitis"
+      ],
+      "model_scores": {
+        "anemia": 0.8135,
+        "sleep_disorder": 0.8782,
+        "inflammation": 0.4078,
+        "iron_deficiency": 0.1721,
+        "hepatitis": 0.0049,
+        "liver": 0.0188,
+        "electrolytes": 0.4572,
+        "kidney": 0.2188,
+        "perimenopause": 0.0,
+        "thyroid": 0.486,
+        "prediabetes": 0.2851
+      },
+      "raw_model_scores": {
+        "prediabetes": 0.2851,
+        "sleep_disorder": 0.8782,
+        "thyroid": 0.486,
+        "hidden_inflammation": 0.4078,
+        "perimenopause": 0.0,
+        "anemia": 0.8135,
+        "electrolyte_imbalance": 0.4572,
+        "kidney": 0.2188,
+        "iron_deficiency": 0.1721,
+        "hepatitis_bc": 0.0049,
+        "liver": 0.0188
+      },
+      "max_required_score": 0.8782,
+      "parse_success": false,
+      "condition_list_match": false,
+      "hallucinated_ids": [],
+      "error": "HTTPConnectionPool(host='127.0.0.1', port=3000): Max retries exceeded with url: /api/deep-analyze (Caused by NewConnectionError(\"HTTPConnection(host='127.0.0.1', port=3000): Failed to establish a new connection: [Errno 1] Operation not permitted\"))"
+    },
+    {
+      "profile_id": "SYN-THY00043",
+      "profile_type": "negative",
+      "target_condition": "hypothyroidism",
+      "patient_context": {
+        "gender": "Male",
+        "age_years": 59.0
+      },
+      "required_condition_ids": [
+        "thyroid",
+        "sleep_disorder"
+      ],
+      "top_allowlist_ids": [
+        "thyroid",
+        "iron_deficiency",
+        "hepatitis",
+        "liver",
+        "inflammation"
+      ],
+      "model_scores": {
+        "thyroid": 0.7313,
+        "iron_deficiency": 0.0425,
+        "hepatitis": 0.0139,
+        "liver": 0.0346,
+        "inflammation": 0.1075,
+        "kidney": 0.3032,
+        "sleep_disorder": 0.7037,
+        "perimenopause": 0.0,
+        "electrolytes": 0.3559,
+        "prediabetes": 0.3999,
+        "anemia": 0.0656
+      },
+      "raw_model_scores": {
+        "kidney": 0.3032,
+        "prediabetes": 0.3999,
+        "electrolyte_imbalance": 0.3559,
+        "perimenopause": 0.0,
+        "anemia": 0.0656,
+        "hidden_inflammation": 0.1075,
+        "thyroid": 0.7313,
+        "sleep_disorder": 0.7037,
+        "liver": 0.0346,
+        "hepatitis_bc": 0.0139,
+        "iron_deficiency": 0.0425
+      },
+      "max_required_score": 0.7313,
+      "parse_success": false,
+      "condition_list_match": false,
+      "hallucinated_ids": [],
+      "error": "HTTPConnectionPool(host='127.0.0.1', port=3000): Max retries exceeded with url: /api/deep-analyze (Caused by NewConnectionError(\"HTTPConnection(host='127.0.0.1', port=3000): Failed to establish a new connection: [Errno 1] Operation not permitted\"))"
+    },
+    {
+      "profile_id": "SYN-THY00005",
+      "profile_type": "positive",
+      "target_condition": "hypothyroidism",
+      "patient_context": {
+        "gender": "Female",
+        "age_years": 44.0
+      },
+      "required_condition_ids": [
+        "sleep_disorder",
+        "anemia",
+        "thyroid",
+        "prediabetes",
+        "kidney"
+      ],
+      "top_allowlist_ids": [
+        "sleep_disorder",
+        "anemia",
+        "thyroid",
+        "prediabetes",
+        "kidney"
+      ],
+      "model_scores": {
+        "sleep_disorder": 0.9425,
+        "anemia": 0.8626,
+        "thyroid": 0.8662,
+        "prediabetes": 0.7207,
+        "kidney": 0.6811,
+        "perimenopause": 0.4772,
+        "iron_deficiency": 0.135,
+        "electrolytes": 0.4899,
+        "inflammation": 0.1966,
+        "liver": 0.0472,
+        "hepatitis": 0.0087
+      },
+      "raw_model_scores": {
+        "hidden_inflammation": 0.1966,
+        "electrolyte_imbalance": 0.4899,
+        "prediabetes": 0.7207,
+        "kidney": 0.6811,
+        "anemia": 0.8626,
+        "perimenopause": 0.4772,
+        "sleep_disorder": 0.9425,
+        "thyroid": 0.8662,
+        "liver": 0.0472,
+        "hepatitis_bc": 0.0087,
+        "iron_deficiency": 0.135
+      },
+      "max_required_score": 0.9425,
+      "parse_success": false,
+      "condition_list_match": false,
+      "hallucinated_ids": [],
+      "error": "HTTPConnectionPool(host='127.0.0.1', port=3000): Max retries exceeded with url: /api/deep-analyze (Caused by NewConnectionError(\"HTTPConnection(host='127.0.0.1', port=3000): Failed to establish a new connection: [Errno 1] Operation not permitted\"))"
+    },
+    {
+      "profile_id": "SYN-HLT00009",
+      "profile_type": "healthy",
+      "target_condition": "",
+      "patient_context": {
+        "gender": "Female",
+        "age_years": 42.0
+      },
+      "required_condition_ids": [
+        "perimenopause"
+      ],
+      "top_allowlist_ids": [
+        "perimenopause",
+        "iron_deficiency",
+        "hepatitis",
+        "inflammation",
+        "liver"
+      ],
+      "model_scores": {
+        "perimenopause": 0.6768,
+        "iron_deficiency": 0.1365,
+        "hepatitis": 0.0049,
+        "inflammation": 0.1728,
+        "liver": 0.0132,
+        "prediabetes": 0.4892,
+        "electrolytes": 0.4212,
+        "anemia": 0.3026,
+        "thyroid": 0.489,
+        "kidney": 0.1191,
+        "sleep_disorder": 0.4742
+      },
+      "raw_model_scores": {
+        "sleep_disorder": 0.4742,
+        "kidney": 0.1191,
+        "hidden_inflammation": 0.1728,
+        "anemia": 0.3026,
+        "prediabetes": 0.4892,
+        "thyroid": 0.489,
+        "electrolyte_imbalance": 0.4212,
+        "perimenopause": 0.6768,
+        "iron_deficiency": 0.1365,
+        "liver": 0.0132,
+        "hepatitis_bc": 0.0049
+      },
+      "max_required_score": 0.6768,
+      "parse_success": false,
+      "condition_list_match": false,
+      "hallucinated_ids": [],
+      "error": "HTTPConnectionPool(host='127.0.0.1', port=3000): Max retries exceeded with url: /api/deep-analyze (Caused by NewConnectionError(\"HTTPConnection(host='127.0.0.1', port=3000): Failed to establish a new connection: [Errno 1] Operation not permitted\"))"
+    }
+  ],
+  "manual_review_cases": []
+}
