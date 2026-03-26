@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 const outcomeCards = [
   'List of most probable causes',
@@ -205,6 +206,7 @@ function FaqItem({
 }
 
 export default function StartPage() {
+  const router = useRouter();
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [showStickyCta, setShowStickyCta] = useState(false);
   const heroCtaRef = useRef<HTMLDivElement | null>(null);
@@ -370,6 +372,16 @@ export default function StartPage() {
               HalfFull does not provide medical diagnoses or treatment. It helps you prepare for a
               conversation with a healthcare professional.
             </p>
+          </section>
+
+          <section className="px-1 pb-6">
+            <button
+              type="button"
+              onClick={() => router.push('/login')}
+              className="w-full rounded-full bg-[var(--color-lime)] px-5 py-4 text-base font-bold text-[var(--color-ink)] shadow-[0_10px_24px_rgba(9,9,15,0.08)] transition-all duration-200 active:scale-[0.98]"
+            >
+              Log in with existing account
+            </button>
           </section>
         </div>
       </main>

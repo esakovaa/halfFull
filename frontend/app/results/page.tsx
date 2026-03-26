@@ -259,53 +259,53 @@ const effectiveSummaryLine = mlRanButEmpty
     addText(effectiveSummaryLine, { size: 10, color: SOFT, lineH: 6 });
     y += 4;
 
-    // ── Opening statement ────────────────────────────────────────────────
-    if (doctorKitOpener) {
-      addSectionHeader('How to open the appointment');
-      // Tinted box
-      doc.setFillColor(119, 101, 244, 0.06);
-      doc.setFillColor(240, 238, 253);
-      const openerLines = doc.splitTextToSize(`"${doctorKitOpener}"`, CONTENT_W - 8);
-      const boxH = openerLines.length * 5.5 + 8;
-      if (y + boxH > 272) { doc.addPage(); y = 20; }
-      doc.roundedRect(MARGIN, y - 2, CONTENT_W, boxH, 3, 3, 'F');
-      doc.setDrawColor(ACCENT);
-      doc.setLineWidth(0.8);
-      doc.line(MARGIN, y - 2, MARGIN, y - 2 + boxH);
-      doc.setLineWidth(0.2);
-      addText(`"${doctorKitOpener}"`, { size: 10, color: '#4a3fa0', indent: 5, lineH: 5.5 });
-      y += 4;
-    }
+    if (doctorIndex === undefined) {
+      // ── Opening statement ──────────────────────────────────────────────
+      if (doctorKitOpener) {
+        addSectionHeader('How to open the appointment');
+        doc.setFillColor(240, 238, 253);
+        const openerLines = doc.splitTextToSize(`"${doctorKitOpener}"`, CONTENT_W - 8);
+        const boxH = openerLines.length * 5.5 + 8;
+        if (y + boxH > 272) { doc.addPage(); y = 20; }
+        doc.roundedRect(MARGIN, y - 2, CONTENT_W, boxH, 3, 3, 'F');
+        doc.setDrawColor(ACCENT);
+        doc.setLineWidth(0.8);
+        doc.line(MARGIN, y - 2, MARGIN, y - 2 + boxH);
+        doc.setLineWidth(0.2);
+        addText(`"${doctorKitOpener}"`, { size: 10, color: '#4a3fa0', indent: 5, lineH: 5.5 });
+        y += 4;
+      }
 
-    // ── Flagged areas ────────────────────────────────────────────────────
-    addSectionHeader('Flagged areas');
-    if (diagnoses.length > 0) {
-      diagnoses.slice(0, 5).forEach((d) => {
-        addBullet(`${d.title} — ${d.signal} signal`);
-      });
-    } else {
-      addText(
-        isLikelyHealthy
-          ? 'No concerning patterns detected. Your profile showed no strong signals above the assessment threshold.'
-          : 'No specific cause identified. Low-level signals were present but did not reach a confident finding after clarification.',
-        { size: 10, indent: 2 }
-      );
-    }
-    y += 2;
-
-    // ── Next steps ───────────────────────────────────────────────────────
-    if (deep?.nextSteps) {
-      addSectionHeader('Next steps - talk to a doctor');
-      addText(deep.nextSteps, { size: 10, indent: 2 });
+      // ── Flagged areas ────────────────────────────────────────────────
+      addSectionHeader('Flagged areas');
+      if (diagnoses.length > 0) {
+        diagnoses.slice(0, 5).forEach((d) => {
+          addBullet(`${d.title} — ${d.signal} signal`);
+        });
+      } else {
+        addText(
+          isLikelyHealthy
+            ? 'No concerning patterns detected. Your profile showed no strong signals above the assessment threshold.'
+            : 'No specific cause identified. Low-level signals were present but did not reach a confident finding after clarification.',
+          { size: 10, indent: 2 }
+        );
+      }
       y += 2;
-    }
 
-    if (recommendedDoctors.length > 0) {
-      addSectionHeader('Recommended doctors');
-      recommendedDoctors.forEach((doctor, index) => {
-        addBullet(`${doctor.specialty}: ${doctor.reason}`, index + 1);
-      });
-      y += 2;
+      // ── Next steps ─────────────────────────────────────────────────────
+      if (deep?.nextSteps) {
+        addSectionHeader('Next steps - talk to a doctor');
+        addText(deep.nextSteps, { size: 10, indent: 2 });
+        y += 2;
+      }
+
+      if (recommendedDoctors.length > 0) {
+        addSectionHeader('Recommended doctors');
+        recommendedDoctors.forEach((doctor, index) => {
+          addBullet(`${doctor.specialty}: ${doctor.reason}`, index + 1);
+        });
+        y += 2;
+      }
     }
 
     const kitsToExport = doctorIndex !== undefined
@@ -439,7 +439,7 @@ const effectiveSummaryLine = mlRanButEmpty
               </button>
               <Link
                 href="/create-account"
-                className="rounded-full border border-[rgba(9,9,15,0.14)] bg-white px-5 py-3 text-center text-sm font-bold text-[var(--color-ink)]"
+                className="rounded-full bg-[var(--color-lime)] px-5 py-3 text-center text-sm font-bold text-[var(--color-ink)]"
               >
                 Create account and save data
               </Link>
@@ -470,46 +470,29 @@ const effectiveSummaryLine = mlRanButEmpty
           {/* ── MedGemma personalised summary ─────────────────────────────── */}
           {combinedSummary ? (
             <div className="section-card border-[var(--color-lime)] px-5 py-4">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="pill-tag bg-[var(--color-lime)] text-[var(--color-ink)]">
-                  Your results · MedGemma
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-base font-bold tracking-[-0.02em] text-[var(--color-ink)]">
+                  The most serious symptoms you shared
+                </h2>
+                <span className="ml-3 shrink-0 pill-tag bg-[var(--color-lime)] text-[var(--color-ink)]">
+                  MedGemma
                 </span>
               </div>
-              {deep?.summaryPoints && deep.summaryPoints.length > 0 ? (
-                <ul className="mt-1 space-y-2">
-                  {deep.summaryPoints.map((point, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm leading-6 text-[var(--color-ink)]">
-                      <span className="mt-[3px] h-2 w-2 shrink-0 rounded-full bg-[var(--color-lime)]" />
-                      {point}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm leading-6 text-[var(--color-ink)]">{combinedSummary}</p>
-              )}
+              <p className="text-sm leading-6 text-[var(--color-ink)]">
+                {deep?.personalizedSummary ?? combinedSummary}
+              </p>
             </div>
           ) : (
             <div className="section-card flex flex-col gap-2 px-5 py-4">
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center justify-between mb-1">
                 <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-ink-soft)]">
-                  AI insights · MedGemma
+                  The most serious symptoms you shared
                 </span>
                 <span className="inline-block h-3 w-3 rounded-full bg-[var(--color-lime)] animate-pulse" />
               </div>
               <div className="h-3 w-full rounded-full bg-[var(--color-card-muted)] animate-pulse" />
               <div className="h-3 w-4/5 rounded-full bg-[var(--color-card-muted)] animate-pulse" />
               <div className="h-3 w-3/5 rounded-full bg-[var(--color-card-muted)] animate-pulse" />
-            </div>
-          )}
-
-          {deep?.recoveryOutlook && !isFallbackContent && (
-            <div className="section-card px-5 py-4">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="pill-tag bg-[var(--color-card-muted)] text-[var(--color-ink)]">
-                  Recovery outlook
-                </span>
-              </div>
-              <p className="text-sm leading-6 text-[var(--color-ink)]">{deep.recoveryOutlook}</p>
             </div>
           )}
 
@@ -694,34 +677,6 @@ const effectiveSummaryLine = mlRanButEmpty
                   })}
                 </div>
               )}
-            </div>
-          )}
-
-          {/* ── Export full report ────────────────────────────────────────── */}
-          {doctorKits.length > 0 && (
-            <div className="rounded-[1.6rem] bg-[#09090f] px-5 py-5 text-white shadow-[0_14px_24px_rgba(9,9,15,0.18)]">
-              <h4 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/65">
-                Full report
-              </h4>
-              <p className="mt-2 text-sm leading-6 text-white/78">
-                Download all doctor kits in one PDF, or send a clean appointment note by email.
-              </p>
-              <div className="mt-4 flex flex-col gap-3">
-                <button
-                  type="button"
-                  onClick={() => downloadDoctorKit()}
-                  className="w-full rounded-full bg-[var(--color-lime)] px-5 py-4 text-base font-bold text-[var(--color-ink)] shadow-[0_10px_24px_rgba(9,9,15,0.18)]"
-                >
-                  Download full PDF
-                </button>
-                <button
-                  type="button"
-                  onClick={emailDoctorKit}
-                  className="w-full rounded-full border border-white/18 bg-white/8 px-5 py-4 text-base font-bold text-white"
-                >
-                  Send via email
-                </button>
-              </div>
             </div>
           )}
 
