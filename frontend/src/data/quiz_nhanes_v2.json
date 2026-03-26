@@ -60,7 +60,8 @@
               "full"
             ],
             "validation": {
-              "required": true
+              "required": true,
+              "max": 120
             }
           },
           {
@@ -234,25 +235,6 @@
             "validation": {
               "required": false
             }
-          },
-          {
-            "id": "med_count",
-            "text": "How many prescription medications do you currently take?",
-            "help_text": "Include pills, patches, injections, and inhalers prescribed by a doctor.",
-            "type": "numeric",
-            "feature_name": "med_count",
-            "options": [
-              {
-                "value": "",
-                "label": "Number of medications"
-              }
-            ],
-            "shown_in_paths": [
-              "full"
-            ],
-            "validation": {
-              "required": false
-            }
           }
         ]
       },
@@ -341,6 +323,56 @@
             ],
             "validation": {
               "required": false
+            }
+          },
+          {
+            "id": "med_count",
+            "text": "How many prescription medications do you currently take?",
+            "help_text": "Include pills, patches, injections, and inhalers prescribed by a doctor.",
+            "type": "numeric",
+            "feature_name": "med_count",
+            "options": [
+              {
+                "value": "",
+                "label": "Number of medications"
+              }
+            ],
+            "shown_in_paths": [
+              "full"
+            ],
+            "screen_group": "current_medications",
+            "validation": {
+              "required": false
+            }
+          },
+          {
+            "id": "bpq050a___now_taking_prescribed_medicine_for_hbp",
+            "text": "Are you currently taking prescribed medicine for high blood pressure?",
+            "type": "binary",
+            "feature_name": "bpq050a___now_taking_prescribed_medicine_for_hbp",
+            "options": [
+              {
+                "value": "1",
+                "label": "Yes"
+              },
+              {
+                "value": "2",
+                "label": "No"
+              }
+            ],
+            "conditional": {
+              "parent_id": "conditions_diagnosed",
+              "parent_values": [
+                "bpq020___ever_told_you_had_high_blood_pressure"
+              ],
+              "condition_type": "contains"
+            },
+            "shown_in_paths": [
+              "full"
+            ],
+            "screen_group": "current_medications",
+            "validation": {
+              "required": true
             }
           },
           {
@@ -498,37 +530,6 @@
             "screen_group": "healthcare_use",
             "validation": {
               "required": true
-            }
-          },
-          {
-            "id": "bpq050a___now_taking_prescribed_medicine_for_hbp",
-            "text": "Are you currently taking prescribed medicine for high blood pressure?",
-            "type": "binary",
-            "feature_name": "bpq050a___now_taking_prescribed_medicine_for_hbp",
-            "options": [
-              {
-                "value": "1",
-                "label": "Yes"
-              },
-              {
-                "value": "2",
-                "label": "No"
-              }
-            ],
-            "conditional": {
-              "parent_id": "conditions_diagnosed",
-              "parent_values": [
-                "bpq020___ever_told_you_had_high_blood_pressure"
-              ],
-              "condition_type": "contains"
-            },
-            "shown_in_paths": [
-              "full"
-            ],
-            "validation": {
-              "required": true,
-              "min": 0,
-              "max": 20
             }
           },
           {
@@ -1230,6 +1231,7 @@
             "shown_in_paths": [
               "full"
             ],
+            "screen_group": "urinary_detail",
             "validation": {
               "required": true
             }

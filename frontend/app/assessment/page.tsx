@@ -100,7 +100,7 @@ export default function AssessmentPage() {
 
       <main className="flex-1 px-5 py-4 overflow-y-auto">
         <div className="max-w-lg mx-auto">
-          {currentQuestions.length > 1 ? (
+          {currentQuestions.length > 1 || Boolean(currentQuestion.screen_group) ? (
             <QuestionGroupCard
               questions={currentQuestions}
               answers={answers}

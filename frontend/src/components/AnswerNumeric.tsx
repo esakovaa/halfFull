@@ -13,6 +13,8 @@ export function AnswerNumeric({
   value = '',
   onChange,
   placeholder = 'Enter a number',
+  min,
+  max,
   error,
 }: Props) {
   return (
@@ -20,6 +22,8 @@ export function AnswerNumeric({
       <input
         type="number"
         inputMode="decimal"
+        min={min}
+        max={max}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
