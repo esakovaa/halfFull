@@ -16,6 +16,7 @@ import {
   type UrgencyAssessment,
 } from '@/src/lib/clinicalSignals';
 import { computeResults, buildDiagnosesFromML } from '@/src/lib/mockResults';
+
 import {
   getInsightForDiagnosis,
   readStoredBayesianScores,
@@ -24,6 +25,7 @@ import {
   readStoredDeepResult,
   readStoredMLScores,
 } from '@/src/lib/medgemma';
+
 import {
   createPrivacyConsentRecord,
   PRIVACY_STORAGE_KEY,
@@ -44,6 +46,19 @@ export default function ResultsPage() {
     setExpandedDoctors((prev) => prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]);
 
   const { currentPct, projectedPct, summaryLine, doctors } = computeResults(answers);
+      
+const mlScores = hydrated ? readStoredMLScores() : null;
+const bayesianDetails = hydrated ? readStoredBayesianDetails() : null;
+const bayesianScores = hydrated ? readStoredBayesianScores() : null;
+
+// Bayesian scores reflect clarification answers, so prefer them when present.
+// Fall back to raw ML scores, then to the rule-based results.
+const effectiveScores = bayesianScores ?? mlScores;
+
+const confirmedConditions = hydrated ? (readStoredConfirmedConditions() ?? []) : [];
+const diagnoses = effectiveScores
+  ? buildDiagnosesFromML(effectiveScores)
+  : computeResults(answers).diagnoses;
 
   const mlScores = hydrated ? readStoredMLScores() : null;
   const bayesianDetails = hydrated ? readStoredBayesianDetails() : null;
@@ -58,13 +73,19 @@ export default function ResultsPage() {
   const biomarkers = extractBiomarkerSnapshot(answers);
 
   // Detect empty-result scenarios after ML/Bayesian scoring.
-  const mlRanButEmpty = effectiveScores !== null && diagnoses.length === 0;
-  const maxScore = effectiveScores ? Math.max(0, ...Object.values(effectiveScores)) : 0;
-  const isLikelyHealthy = mlRanButEmpty && maxScore < 0.20;
+  // Distinguish "likely healthy" (all scores very low) from "uncertain cause" (some signal
+  // present but below threshold — e.g. after clarification questions reduced probabilities).
+const mlRanButEmpty = effectiveScores !== null && diagnoses.length === 0;
+const maxScore = effectiveScores ? Math.max(0, ...Object.values(effectiveScores)) : 0;
+const isLikelyHealthy = mlRanButEmpty && maxScore < 0.20;
 
-  const effectiveSummaryLine = mlRanButEmpty
-    ? (isLikelyHealthy
-      ? 'No concerning energy patterns found - your profile looks reassuring.'
+// Override the rule-based summaryLine when ML ran but found nothing.
+const effectiveSummaryLine = mlRanButEmpty
+  ? (isLikelyHealthy
+    ? 'No concerning energy patterns found — your profile looks reassuring.'
+    : 'Your assessment shows some low-level signals, but nothing points to a specific cause.')
+  : summaryLine;
+
       : 'Your assessment shows some low-level signals, but nothing points to a specific cause.')
     : summaryLine;
 
@@ -623,7 +644,8 @@ export default function ResultsPage() {
                     : 'Your answers show some fatigue signals, but they don\'t point clearly to a specific cause.'}
               </p>
             </div>
-            {diagnoses.length > 0 ? (
+
+                        {diagnoses.length > 0 ? (
               diagnoses.map((d, i) => (
                 <DiagnosisCard
                   key={d.id}
@@ -672,6 +694,7 @@ export default function ResultsPage() {
                 )}
               </div>
             ) : null}
+
           </div>
 
           {/* ── Next steps + doctor cards ─────────────────────────────────── */}
