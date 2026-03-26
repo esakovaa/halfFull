@@ -9,9 +9,15 @@ interface Props {
   questions: Question[];
   answers: Record<string, unknown>;
   onAnswer: (questionId: string, val: unknown) => void;
+  errors?: Record<string, string | Record<string, string>>;
 }
 
-function renderInput(question: Question, value: unknown, onChange: (val: unknown) => void) {
+function renderInput(
+  question: Question,
+  value: unknown,
+  onChange: (val: unknown) => void,
+  error?: string | Record<string, string>
+) {
   switch (question.type) {
     case 'binary':
     case 'categorical':
@@ -21,6 +27,7 @@ function renderInput(question: Question, value: unknown, onChange: (val: unknown
           options={question.options}
           value={value as string | undefined}
           onChange={onChange}
+          layout={question.answer_layout}
         />
       );
     case 'numeric':
@@ -28,6 +35,9 @@ function renderInput(question: Question, value: unknown, onChange: (val: unknown
         <AnswerNumeric
           value={value as string | undefined}
           onChange={onChange}
+          min={question.validation?.min}
+          max={question.validation?.max}
+          error={typeof error === 'string' ? error : undefined}
         />
       );
     default:
@@ -35,7 +45,7 @@ function renderInput(question: Question, value: unknown, onChange: (val: unknown
   }
 }
 
-export function QuestionGroupCard({ questions, answers, onAnswer }: Props) {
+export function QuestionGroupCard({ questions, answers, onAnswer, errors = {} }: Props) {
   if (questions.length === 0) return null;
 
   const first = questions[0];
@@ -63,7 +73,7 @@ export function QuestionGroupCard({ questions, answers, onAnswer }: Props) {
               {q.help_text}
             </p>
           )}
-          {renderInput(q, answers[q.id], (val) => onAnswer(q.id, val))}
+          {renderInput(q, answers[q.id], (val) => onAnswer(q.id, val), errors[q.id])}
         </div>
       ))}
     </div>

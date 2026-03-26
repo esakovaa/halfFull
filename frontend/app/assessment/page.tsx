@@ -26,6 +26,7 @@ export default function AssessmentPage() {
     hasAnswer,
     hydrated,
     answers,
+    currentValidationErrors,
     setAnswer,
     goNext,
     goBack,
@@ -103,12 +104,14 @@ export default function AssessmentPage() {
             <QuestionGroupCard
               questions={currentQuestions}
               answers={answers}
+              errors={currentValidationErrors}
               onAnswer={setAnswer}
             />
           ) : (
             <QuestionCard
               question={currentQuestion}
               value={currentAnswer}
+              error={currentQuestion ? currentValidationErrors[currentQuestion.id] : null}
               onChange={(val) => setAnswer(currentQuestion.id, val)}
             />
           )}

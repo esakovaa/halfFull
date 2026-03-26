@@ -15,6 +15,7 @@ interface Props {
   question: Question;
   value: unknown;
   onChange: (val: unknown) => void;
+  error?: string | Record<string, string> | null;
 }
 
 // Derive a short display label from the question id.
@@ -24,7 +25,7 @@ function idToLabel(id: string): string {
   return '';
 }
 
-export function QuestionCard({ question, value, onChange }: Props) {
+export function QuestionCard({ question, value, onChange, error }: Props) {
   const accentColor = MODULE_COLORS[question.module] ?? '#A2B6CB';
   const moduleLabel = MODULE_LABELS[question.module] ?? question.moduleTitle;
 
@@ -39,6 +40,7 @@ export function QuestionCard({ question, value, onChange }: Props) {
             options={question.options}
             value={value as string | undefined}
             onChange={(v) => onChange(v)}
+            layout={question.answer_layout}
           />
         );
 
@@ -58,6 +60,9 @@ export function QuestionCard({ question, value, onChange }: Props) {
           <AnswerNumeric
             value={value as string | undefined}
             onChange={(v) => onChange(v)}
+            min={question.validation?.min}
+            max={question.validation?.max}
+            error={typeof error === 'string' ? error : undefined}
           />
         );
 
@@ -67,6 +72,9 @@ export function QuestionCard({ question, value, onChange }: Props) {
             fields={question.options}
             value={value as Record<string, string> | undefined}
             onChange={(v) => onChange(v)}
+            min={question.validation?.min}
+            max={question.validation?.max}
+            errors={typeof error === 'object' && error ? error : undefined}
           />
         );
 

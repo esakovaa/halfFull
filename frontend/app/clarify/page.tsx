@@ -117,6 +117,7 @@ export default function ClarifyPage() {
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
   const [retryKey, setRetryKey] = useState(0);
   const [currentScreenIndex, setCurrentScreenIndex] = useState(0);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -125,6 +126,7 @@ export default function ClarifyPage() {
 
     const load = async () => {
       try {
+        setErrorMessage(null);
         let mlScores = readStoredMLScores() ?? {};
         if (Object.keys(mlScores).length === 0) {
           const { scores, confirmed } = await fetchMLScoresWithTimeout(answers);
@@ -153,8 +155,11 @@ export default function ClarifyPage() {
         setBayesianData(data);
         setCurrentScreenIndex(0);
         setPhase('ready');
-      } catch {
-        if (!cancelled.current) setPhase('error');
+      } catch (error) {
+        if (!cancelled.current) {
+          setErrorMessage(error instanceof Error ? error.message : 'Please try again.');
+          setPhase('error');
+        }
       }
     };
 
@@ -274,12 +279,18 @@ export default function ClarifyPage() {
           <p className="text-sm font-medium text-[var(--color-ink-soft)]">
             Could not load follow-up questions — please try again.
           </p>
+          {errorMessage && (
+            <p className="max-w-xs text-xs leading-5 text-[var(--color-ink-soft)]">
+              {errorMessage}
+            </p>
+          )}
           <button
             type="button"
             onClick={() => {
               setBayesianData(null);
               setSelectedAnswers({});
               setCurrentScreenIndex(0);
+              setErrorMessage(null);
               setPhase('loading');
               setRetryKey((current) => current + 1);
             }}

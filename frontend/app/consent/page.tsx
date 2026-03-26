@@ -79,33 +79,39 @@ export default function ConsentPage() {
               <p className="mt-4 max-w-[30ch] text-sm leading-6 text-[var(--color-ink-soft)]">
                 We use your answers to generate your fatigue assessment and doctor-ready report.
               </p>
-
-              <div className="mt-5 rounded-[1.6rem] border border-[rgba(140,170,101,0.24)] bg-white/78 px-4 py-4 backdrop-blur-sm">
-                <p className="text-sm font-semibold text-[var(--color-ink)]">Key points</p>
-                <ul className="mt-3 space-y-2.5 text-sm leading-6 text-[var(--color-ink-soft)]">
-                  <li>Your data is linked to a random anonymous ID, not your name.</li>
-                  <li>It&apos;s stored only temporarily, for up to 24 hours.</li>
-                  <li>You can leave anytime and clear this session data.</li>
-                </ul>
-              </div>
             </div>
           </section>
 
           <section className="section-card flex flex-col gap-4 px-5 py-5">
-            <label className="flex items-start gap-3 rounded-[1.4rem] border border-[rgba(140,170,101,0.24)] bg-[rgba(255,255,255,0.88)] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
-              <input
-                type="checkbox"
-                checked={consentChecked}
-                onChange={(event) => setConsentChecked(event.target.checked)}
-                className="mt-1 h-4 w-4 accent-[#77b255]"
-              />
-              <span className="text-sm leading-6 text-[var(--color-ink)]">
-                I agree to HalfFull processing my health-related answers to generate my assessment and report.
-              </span>
-            </label>
+            <div className="rounded-[1.6rem] border border-[rgba(140,170,101,0.24)] bg-[rgba(255,255,255,0.92)] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
+              <div className="flex items-center gap-2">
+                <span className="text-base" aria-hidden="true">🌿</span>
+                <p className="text-sm font-semibold text-[var(--color-ink)]">We care about your privacy</p>
+              </div>
 
+              <ul className="mt-3 space-y-2.5 text-sm leading-6 text-[var(--color-ink-soft)]">
+                <li>🪪 Your data is linked to a random anonymous ID, not your name.</li>
+                <li>⏳ It&apos;s stored only temporarily, for up to 24 hours.</li>
+                <li>🧹 You can leave anytime and clear this session data.</li>
+              </ul>
+
+              <label className="mt-4 flex items-start gap-3 rounded-[1.4rem] border border-[rgba(140,170,101,0.24)] bg-[rgba(244,250,232,0.8)] px-4 py-4">
+                <input
+                  type="checkbox"
+                  checked={consentChecked}
+                  onChange={(event) => setConsentChecked(event.target.checked)}
+                  className="mt-1 h-4 w-4 accent-[#77b255]"
+                />
+                <span className="text-sm leading-6 text-[var(--color-ink)]">
+                  I agree to HalfFull processing my health-related answers to generate my assessment and report.
+                </span>
+              </label>
+            </div>
+          </section>
+
+          <div className="flex flex-col gap-4 px-1">
             {error && (
-              <p className="rounded-[1rem] border border-[rgba(179,67,67,0.14)] bg-[rgba(179,67,67,0.05)] px-3 py-2 text-sm text-[#b34343]">
+              <p className="rounded-[1rem] border border-[rgba(179,67,67,0.14)] bg-[rgba(255,248,248,0.7)] px-3 py-2 text-sm text-[#b34343]">
                 {error}
               </p>
             )}
@@ -125,7 +131,7 @@ export default function ConsentPage() {
             >
               Back
             </Link>
-          </section>
+          </div>
         </div>
       </main>
     </div>

@@ -40,7 +40,9 @@
               "full"
             ],
             "validation": {
-              "required": true
+              "required": true,
+              "min": 0,
+              "max": 20
             }
           },
           {
@@ -143,7 +145,9 @@
             "screen_group": "body_measurements",
             "optional": true,
             "validation": {
-              "required": false
+              "required": false,
+              "min": 100,
+              "max": 250
             }
           },
           {
@@ -164,7 +168,9 @@
             "screen_group": "body_measurements",
             "optional": true,
             "validation": {
-              "required": false
+              "required": false,
+              "min": 25,
+              "max": 350
             }
           },
           {
@@ -186,8 +192,8 @@
             "optional": true,
             "validation": {
               "required": false,
-              "min": 50,
-              "max": 180
+              "min": 40,
+              "max": 220
             }
           },
           {
@@ -198,59 +204,36 @@
             "options": [
               {
                 "value": "1",
-                "label": "Less than secondary school",
+                "label": "Below lower secondary",
                 "encoded_value": 1
               },
               {
                 "value": "2",
-                "label": "Secondary school, no diploma",
+                "label": "Lower secondary completed",
                 "encoded_value": 2
               },
               {
                 "value": "3",
-                "label": "High school graduate or GED",
+                "label": "Upper secondary completed",
                 "encoded_value": 3
               },
               {
                 "value": "4",
-                "label": "Some college or associate degree",
+                "label": "Post-secondary or short-cycle tertiary",
                 "encoded_value": 4
               },
               {
                 "value": "5",
-                "label": "College graduate or higher",
+                "label": "University degree or higher",
                 "encoded_value": 5
               }
             ],
             "shown_in_paths": [
               "full"
             ],
+            "screen_group": "alcohol_use",
             "validation": {
               "required": false
-            }
-          },
-          {
-            "id": "huq071___overnight_hospital_patient_in_last_year",
-            "text": "Were you admitted to a hospital overnight in the past year?",
-            "type": "binary",
-            "feature_name": "huq071___overnight_hospital_patient_in_last_year",
-            "options": [
-              {
-                "value": "1",
-                "label": "Yes",
-                "encoded_value": 1
-              },
-              {
-                "value": "2",
-                "label": "No",
-                "encoded_value": 2
-              }
-            ],
-            "shown_in_paths": [
-              "full"
-            ],
-            "validation": {
-              "required": true
             }
           },
           {
@@ -443,6 +426,7 @@
             "shown_in_paths": [
               "full"
             ],
+            "screen_group": "alcohol_use",
             "validation": {
               "required": true
             }
@@ -488,15 +472,16 @@
             "shown_in_paths": [
               "full"
             ],
+            "screen_group": "healthcare_use",
             "validation": {
               "required": false
             }
           },
           {
-            "id": "bpq030___told_had_high_blood_pressure___2+_times",
-            "text": "Were you told you had high blood pressure on two or more visits?",
+            "id": "huq071___overnight_hospital_patient_in_last_year",
+            "text": "Were you admitted to a hospital overnight in the past year?",
             "type": "binary",
-            "feature_name": "bpq030___told_had_high_blood_pressure___2+_times",
+            "feature_name": "huq071___overnight_hospital_patient_in_last_year",
             "options": [
               {
                 "value": "1",
@@ -509,16 +494,10 @@
                 "encoded_value": 2
               }
             ],
-            "conditional": {
-              "parent_id": "conditions_diagnosed",
-              "parent_values": [
-                "bpq020___ever_told_you_had_high_blood_pressure"
-              ],
-              "condition_type": "contains"
-            },
             "shown_in_paths": [
               "full"
             ],
+            "screen_group": "healthcare_use",
             "validation": {
               "required": true
             }
@@ -594,30 +573,6 @@
             }
           },
           {
-            "id": "mcq366d___doctor_told_to_reduce_fat_in_diet",
-            "text": "Has a doctor ever advised you to reduce fat or calories in your diet?",
-            "type": "binary",
-            "feature_name": "mcq366d___doctor_told_to_reduce_fat_in_diet",
-            "options": [
-              {
-                "value": "1",
-                "label": "Yes",
-                "encoded_value": 1
-              },
-              {
-                "value": "2",
-                "label": "No",
-                "encoded_value": 2
-              }
-            ],
-            "shown_in_paths": [
-              "full"
-            ],
-            "validation": {
-              "required": true
-            }
-          },
-          {
             "id": "whq040___like_to_weigh_more,_less_or_same",
             "text": "Would you like to weigh more, less, or about the same as you do now?",
             "type": "categorical",
@@ -668,6 +623,32 @@
               "full"
             ],
             "screen_group": "weight_goals",
+            "validation": {
+              "required": true
+            }
+          },
+          {
+            "id": "mcq366d___doctor_told_to_reduce_fat_in_diet",
+            "text": "Has a doctor ever advised you to reduce fat or calories in your diet?",
+            "type": "binary",
+            "feature_name": "mcq366d___doctor_told_to_reduce_fat_in_diet",
+            "options": [
+              {
+                "value": "1",
+                "label": "Yes",
+                "encoded_value": 1
+              },
+              {
+                "value": "2",
+                "label": "No",
+                "encoded_value": 2
+              }
+            ],
+            "shown_in_paths": [
+              "full"
+            ],
+            "screen_group": "weight_goals",
+            "answer_layout": "inline",
             "validation": {
               "required": true
             }
@@ -1113,10 +1094,41 @@
               },
               {
                 "value": "slq050___ever_told_doctor_had_trouble_sleeping?",
-                "label": "Trouble sleeping (told by doctor)",
+                "label": "Trouble sleeping (discussed with a doctor)",
                 "sub_type": "binary"
               }
             ],
+            "shown_in_paths": [
+              "full"
+            ],
+            "validation": {
+              "required": true
+            }
+          },
+          {
+            "id": "bpq030___told_had_high_blood_pressure___2+_times",
+            "text": "Were you told you had high blood pressure on two or more visits?",
+            "type": "binary",
+            "feature_name": "bpq030___told_had_high_blood_pressure___2+_times",
+            "options": [
+              {
+                "value": "1",
+                "label": "Yes",
+                "encoded_value": 1
+              },
+              {
+                "value": "2",
+                "label": "No",
+                "encoded_value": 2
+              }
+            ],
+            "conditional": {
+              "parent_id": "conditions_diagnosed",
+              "parent_values": [
+                "bpq020___ever_told_you_had_high_blood_pressure"
+              ],
+              "condition_type": "contains"
+            },
             "shown_in_paths": [
               "full"
             ],

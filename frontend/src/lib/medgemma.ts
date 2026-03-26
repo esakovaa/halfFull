@@ -284,17 +284,35 @@ export interface MLScoreResult {
   confirmed: string[];
 }
 
+function shouldRetryWithoutPrivacy(status: number, errorMessage: string, hadPrivacy: boolean): boolean {
+  if (!hadPrivacy) return false;
+  if (status !== 400) return false;
+  return /consent|privacy|expired|outdated|payload/i.test(errorMessage);
+}
+
 /** Call /api/score to run the ML model pipeline and get condition probabilities + confirmed list */
 export async function fetchMLScores(
   answers: Record<string, unknown>
 ): Promise<MLScoreResult> {
   const privacy = getPrivacyContext();
   const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.trim() || '';
-  const response = await fetch(`${backendBaseUrl}/api/score`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ answers, privacy }),
-  });
+  const makeRequest = async (includePrivacy: boolean) =>
+    fetch(`${backendBaseUrl}/api/score`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answers, privacy: includePrivacy ? privacy : null }),
+    });
+
+  let response = await makeRequest(true);
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ error: 'Unknown error' }));
+    const message = (err as { error?: string }).error ?? `HTTP ${response.status}`;
+    if (shouldRetryWithoutPrivacy(response.status, message, Boolean(privacy))) {
+      response = await makeRequest(false);
+    } else {
+      throw new Error(message);
+    }
+  }
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -381,11 +399,23 @@ export async function fetchBayesianQuestions(
 ): Promise<BayesianQuestionsResult> {
   const privacy = getPrivacyContext();
   const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.trim() || '';
-  const response = await fetch(`${backendBaseUrl}/api/bayesian-questions`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ mlScores, patientSex, existingAnswers, privacy }),
-  });
+  const makeRequest = async (includePrivacy: boolean) =>
+    fetch(`${backendBaseUrl}/api/bayesian-questions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mlScores, patientSex, existingAnswers, privacy: includePrivacy ? privacy : null }),
+    });
+
+  let response = await makeRequest(true);
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ error: 'Unknown error' }));
+    const message = (err as { error?: string }).error ?? `HTTP ${response.status}`;
+    if (shouldRetryWithoutPrivacy(response.status, message, Boolean(privacy))) {
+      response = await makeRequest(false);
+    } else {
+      throw new Error(message);
+    }
+  }
   if (!response.ok) {
     const err = await response.json().catch(() => ({ error: 'Unknown error' }));
     throw new Error((err as { error?: string }).error ?? `HTTP ${response.status}`);
@@ -403,11 +433,30 @@ export async function fetchBayesianUpdate(
 ): Promise<BayesianUpdateResult> {
   const privacy = getPrivacyContext();
   const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.trim() || '';
-  const response = await fetch(`${backendBaseUrl}/api/bayesian-update`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ mlScores, confounderAnswers, answersByCondition, patientSex, existingAnswers, privacy }),
-  });
+  const makeRequest = async (includePrivacy: boolean) =>
+    fetch(`${backendBaseUrl}/api/bayesian-update`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mlScores,
+        confounderAnswers,
+        answersByCondition,
+        patientSex,
+        existingAnswers,
+        privacy: includePrivacy ? privacy : null,
+      }),
+    });
+
+  let response = await makeRequest(true);
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ error: 'Unknown error' }));
+    const message = (err as { error?: string }).error ?? `HTTP ${response.status}`;
+    if (shouldRetryWithoutPrivacy(response.status, message, Boolean(privacy))) {
+      response = await makeRequest(false);
+    } else {
+      throw new Error(message);
+    }
+  }
   if (!response.ok) {
     const err = await response.json().catch(() => ({ error: 'Unknown error' }));
     throw new Error((err as { error?: string }).error ?? `HTTP ${response.status}`);

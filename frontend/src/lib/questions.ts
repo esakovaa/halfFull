@@ -20,6 +20,14 @@ export interface QuestionOption {
   sub_type?: 'binary' | 'numeric';
   help_text?: string;
   unit?: string;
+  min?: number;
+  max?: number;
+}
+
+export interface QuestionValidation {
+  required?: boolean;
+  min?: number;
+  max?: number;
 }
 
 export interface Conditional {
@@ -42,6 +50,8 @@ export interface Question {
   shown_in_paths: ShownIn[];
   optional?: boolean;
   screen_group?: string;
+  answer_layout?: 'stacked' | 'inline';
+  validation?: QuestionValidation;
 }
 
 interface RawQuestion {
@@ -55,9 +65,8 @@ interface RawQuestion {
   additional_conditional?: Conditional;
   shown_in_paths?: ShownIn[];
   screen_group?: string;
-  validation?: {
-    required?: boolean;
-  };
+  answer_layout?: 'stacked' | 'inline';
+  validation?: QuestionValidation;
 }
 
 interface RawModule {
@@ -111,6 +120,8 @@ export const QUESTIONS: Question[] = modules.flatMap((module) =>
     shown_in_paths: question.shown_in_paths ?? module.shown_in_paths,
     optional: question.validation?.required === false,
     screen_group: question.screen_group,
+    answer_layout: question.answer_layout,
+    validation: question.validation,
   }))
 );
 

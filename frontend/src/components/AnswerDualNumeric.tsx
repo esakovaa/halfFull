@@ -12,9 +12,19 @@ interface Props {
   fields: Field[];
   value: Record<string, string> | undefined;
   onChange: (val: Record<string, string>) => void;
+  min?: number;
+  max?: number;
+  errors?: Record<string, string>;
 }
 
-export function AnswerDualNumeric({ fields, value = {}, onChange }: Props) {
+export function AnswerDualNumeric({
+  fields,
+  value = {},
+  onChange,
+  min,
+  max,
+  errors = {},
+}: Props) {
   const handleChange = (key: string, raw: string) => {
     onChange({ ...value, [key]: raw });
   };
@@ -56,12 +66,17 @@ export function AnswerDualNumeric({ fields, value = {}, onChange }: Props) {
               <input
                 type="number"
                 inputMode="decimal"
+                min={min ?? field.min}
+                max={max ?? field.max}
                 value={value[field.value] ?? ''}
                 onChange={(e) => handleChange(field.value, e.target.value)}
                 placeholder="0"
                 className={[
                   'w-full rounded-[1.35rem] border bg-white px-4 py-3 pr-16',
-                  'border-[rgba(151,166,210,0.28)] text-[var(--color-ink)] text-base placeholder-[var(--color-ink-soft)]',
+                  errors[field.value]
+                    ? 'border-[rgba(179,67,67,0.45)] text-[var(--color-ink)]'
+                    : 'border-[rgba(151,166,210,0.28)] text-[var(--color-ink)]',
+                  'text-base placeholder-[var(--color-ink-soft)]',
                   'focus:border-[var(--color-accent)] focus:outline-none transition-colors',
                   '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
                 ].join(' ')}
@@ -70,6 +85,9 @@ export function AnswerDualNumeric({ fields, value = {}, onChange }: Props) {
                 <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm text-[var(--color-ink-soft)]">
                   {field.unit}
                 </span>
+              )}
+              {errors[field.value] && (
+                <p className="mt-2 text-sm text-[#b34343]">{errors[field.value]}</p>
               )}
             </div>
           )}

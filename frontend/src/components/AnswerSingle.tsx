@@ -6,11 +6,12 @@ interface Props {
   options: QuestionOption[];
   value: string | undefined;
   onChange: (val: string) => void;
+  layout?: 'stacked' | 'inline';
 }
 
-export function AnswerSingle({ options, value, onChange }: Props) {
+export function AnswerSingle({ options, value, onChange, layout = 'stacked' }: Props) {
   return (
-    <div className="flex flex-col gap-3">
+    <div className={layout === 'inline' ? 'grid grid-cols-2 gap-3' : 'flex flex-col gap-3'}>
       {options.map((option) => {
         const selected = value === option.value;
         return (
@@ -18,13 +19,14 @@ export function AnswerSingle({ options, value, onChange }: Props) {
             key={option.value}
             onClick={() => onChange(option.value)}
             className={[
-              'w-full rounded-[1.35rem] border px-5 py-4 text-left text-base transition-all duration-150 active:scale-[0.98]',
+              'rounded-[1.35rem] border px-5 py-4 text-base transition-all duration-150 active:scale-[0.98]',
+              layout === 'inline' ? 'w-full text-center' : 'w-full text-left',
               selected
                 ? 'border-[rgba(119,101,244,0.2)] bg-[var(--color-accent-soft)] text-[var(--color-ink)] shadow-[0_10px_18px_rgba(119,101,244,0.16)]'
                 : 'border-[rgba(151,166,210,0.28)] bg-white text-[var(--color-ink)]',
             ].join(' ')}
           >
-            <div className="flex items-center justify-between gap-4">
+            <div className={layout === 'inline' ? 'flex items-center justify-center gap-3' : 'flex items-center justify-between gap-4'}>
               <span className="font-medium">{option.label}</span>
               <span
                 className={[
