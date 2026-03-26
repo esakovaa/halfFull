@@ -83,27 +83,25 @@ export default function ConsentPage() {
           </section>
 
           <section className="section-card flex flex-col gap-4 px-5 py-5">
-            <div className="rounded-[1.6rem] border border-[rgba(140,170,101,0.24)] bg-[rgba(255,255,255,0.92)] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
-              <p className="text-sm font-semibold text-[var(--color-ink)]">We care about your privacy</p>
+            <p className="text-sm font-semibold text-[var(--color-ink)]">We care about your privacy</p>
 
-              <ul className="mt-3 space-y-2.5 text-sm leading-6 text-[var(--color-ink-soft)]">
-                <li>✔ Your data is linked to a random anonymous ID, not your name.</li>
-                <li>✔ It&apos;s stored only temporarily, for up to 24 hours.</li>
-                <li>✔ You can leave anytime and clear this session data.</li>
-              </ul>
+            <ul className="space-y-2.5 text-sm leading-6 text-[var(--color-ink-soft)]">
+              <li>✔ Your data is linked to a random anonymous ID, not your name.</li>
+              <li>✔ It&apos;s stored only temporarily, for up to 24 hours.</li>
+              <li>✔ You can leave anytime and clear this session data.</li>
+            </ul>
 
-              <label className="mt-5 flex items-start gap-3 border-t border-[rgba(140,170,101,0.18)] pt-4">
-                <input
-                  type="checkbox"
-                  checked={consentChecked}
-                  onChange={(event) => setConsentChecked(event.target.checked)}
-                  className="mt-1 h-4 w-4 accent-[#77b255]"
-                />
-                <span className="text-sm leading-6 text-[var(--color-ink)]">
-                  I agree to HalfFull processing my health-related answers to generate my assessment and report.
-                </span>
-              </label>
-            </div>
+            <label className="mt-1 flex items-start gap-3 border-t border-[rgba(140,170,101,0.18)] pt-4">
+              <input
+                type="checkbox"
+                checked={consentChecked}
+                onChange={(event) => setConsentChecked(event.target.checked)}
+                className="mt-1 h-4 w-4 accent-[#77b255]"
+              />
+              <span className="text-sm leading-6 text-[var(--color-ink)]">
+                I agree to HalfFull processing my health-related answers to generate my assessment and report.
+              </span>
+            </label>
           </section>
 
           <div className="flex flex-col gap-4 px-1">

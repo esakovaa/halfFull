@@ -89,10 +89,17 @@ export function normalizeConsentGrantContext(value: unknown): ServerPrivacyConte
 
   return {
     anonymousId: privacy.anonymousId,
-    consentVersion: CONSENT_VERSION,
+    consentVersion: privacy.consentVersion || CONSENT_VERSION,
     consentGrantedAt: privacy.consentGrantedAt,
     expiresAt: privacy.expiresAt,
     purposes: Array.isArray(privacy.purposes) ? privacy.purposes : [],
+  };
+}
+
+function ensureConsentVersion(privacy: ServerPrivacyContext): ServerPrivacyContext {
+  return {
+    ...privacy,
+    consentVersion: privacy.consentVersion || CONSENT_VERSION,
   };
 }
 
@@ -123,31 +130,32 @@ export async function recordConsentAcceptance(
   privacy: ServerPrivacyContext,
   metadata: Record<string, unknown> = {}
 ): Promise<void> {
+  const safePrivacy = ensureConsentVersion(privacy);
   const supabase = getSupabaseAdmin();
   if (!supabase) return;
 
-  const retentionExpiresAt = privacy.expiresAt;
+  const retentionExpiresAt = safePrivacy.expiresAt;
 
   await purgeExpiredPrivacyData();
 
   const [profileResult, eventResult] = await Promise.all([
     supabase.from('user_profiles').upsert({
-      anonymous_id: privacy.anonymousId,
-      consent_version: privacy.consentVersion,
+      anonymous_id: safePrivacy.anonymousId,
+      consent_version: safePrivacy.consentVersion,
       consent_status: 'granted',
-      consent_granted_at: privacy.consentGrantedAt,
+      consent_granted_at: safePrivacy.consentGrantedAt,
       last_seen_at: new Date().toISOString(),
       retention_expires_at: retentionExpiresAt,
       profile: {
-        purposes: privacy.purposes ?? [],
+        purposes: safePrivacy.purposes ?? [],
         ...metadata,
       },
     }),
     supabase.from('consent_events').insert({
-      anonymous_id: privacy.anonymousId,
+      anonymous_id: safePrivacy.anonymousId,
       event_type: 'granted',
-      consent_version: privacy.consentVersion,
-      occurred_at: privacy.consentGrantedAt,
+      consent_version: safePrivacy.consentVersion,
+      occurred_at: safePrivacy.consentGrantedAt,
       retention_expires_at: retentionExpiresAt,
       metadata,
     }),
@@ -158,6 +166,7 @@ export async function recordConsentAcceptance(
 }
 
 export async function recordConsentExit(privacy: ServerPrivacyContext): Promise<void> {
+  const safePrivacy = ensureConsentVersion(privacy);
   const supabase = getSupabaseAdmin();
   if (!supabase) return;
 
@@ -165,10 +174,10 @@ export async function recordConsentExit(privacy: ServerPrivacyContext): Promise<
 
   const [profileResult, eventResult] = await Promise.all([
     supabase.from('user_profiles').upsert({
-      anonymous_id: privacy.anonymousId,
-      consent_version: privacy.consentVersion,
+      anonymous_id: safePrivacy.anonymousId,
+      consent_version: safePrivacy.consentVersion,
       consent_status: 'revoked',
-      consent_granted_at: privacy.consentGrantedAt,
+      consent_granted_at: safePrivacy.consentGrantedAt,
       last_seen_at: now,
       retention_expires_at: now,
       profile: {
@@ -176,9 +185,9 @@ export async function recordConsentExit(privacy: ServerPrivacyContext): Promise<
       },
     }),
     supabase.from('consent_events').insert({
-      anonymous_id: privacy.anonymousId,
+      anonymous_id: safePrivacy.anonymousId,
       event_type: 'revoked',
-      consent_version: privacy.consentVersion,
+      consent_version: safePrivacy.consentVersion,
       occurred_at: now,
       retention_expires_at: now,
       metadata: {
@@ -201,28 +210,29 @@ export async function persistHealthSession(args: {
   if (!supabase) return;
 
   const { privacy, sessionKind, payload, profileSummary = {} } = args;
+  const safePrivacy = ensureConsentVersion(privacy);
   const now = new Date().toISOString();
 
   await purgeExpiredPrivacyData();
 
   const [profileResult, sessionResult] = await Promise.all([
     supabase.from('user_profiles').upsert({
-      anonymous_id: privacy.anonymousId,
-      consent_version: privacy.consentVersion,
+      anonymous_id: safePrivacy.anonymousId,
+      consent_version: safePrivacy.consentVersion,
       consent_status: 'granted',
-      consent_granted_at: privacy.consentGrantedAt,
+      consent_granted_at: safePrivacy.consentGrantedAt,
       last_seen_at: now,
-      retention_expires_at: privacy.expiresAt,
+      retention_expires_at: safePrivacy.expiresAt,
       profile: {
         ...profileSummary,
         last_session_kind: sessionKind,
       },
     }),
     supabase.from('health_data_sessions').insert({
-      anonymous_id: privacy.anonymousId,
+      anonymous_id: safePrivacy.anonymousId,
       session_kind: sessionKind,
       payload,
-      retention_expires_at: privacy.expiresAt,
+      retention_expires_at: safePrivacy.expiresAt,
     }),
   ]);
 
