@@ -256,12 +256,12 @@ export default function StartPage() {
 
               <div ref={heroCtaRef} className="mt-9">
                 <Link
-                  href="/chapters"
+                  href="/consent"
                   className="block w-full rounded-full px-5 py-4 text-center text-base font-bold shadow-[0_14px_28px_rgba(9,9,15,0.2)] transition-all duration-200 active:scale-[0.98]"
                   style={{ backgroundColor: '#09090f', color: '#ffffff' }}
-                  aria-label="Start the fatigue quiz"
+                  aria-label="Take assessment test"
                 >
-                  Start the fatigue quiz
+                  Take assessment test
                 </Link>
               </div>
             </div>
@@ -380,12 +380,12 @@ export default function StartPage() {
         }`}
       >
         <Link
-          href="/chapters"
+          href="/consent"
           className="pointer-events-auto block min-h-14 w-full rounded-full border border-[rgba(151,166,210,0.22)] bg-[rgba(9,9,15,0.96)] px-5 py-4 text-center text-base font-bold text-white shadow-[0_22px_40px_rgba(9,9,15,0.24)] backdrop-blur-sm transition-all duration-200 active:scale-[0.98]"
           style={{ color: '#ffffff' }}
-          aria-label="Start the fatigue quiz"
+          aria-label="Take assessment test"
         >
-          Start the fatigue quiz
+          Take assessment test
         </Link>
       </div>
     </div>

@@ -33,7 +33,6 @@ import {
   storePrivacyConsent,
 } from '@/src/lib/privacy';
 import type { DeepMedGemmaResult, DoctorKit } from '@/src/lib/medgemma';
-import { EnergySpectrum } from '@/src/components/results/EnergySpectrum';
 import { DiagnosisCard } from '@/src/components/results/DiagnosisCard';
 
 export default function ResultsPage() {
@@ -45,7 +44,7 @@ export default function ResultsPage() {
   const toggleDoctor = (i: number) =>
     setExpandedDoctors((prev) => prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]);
 
-  const { currentPct, projectedPct, summaryLine, doctors } = computeResults(answers);
+  const { summaryLine, doctors } = computeResults(answers);
 
   const mlScores = hydrated ? readStoredMLScores() : null;
   const bayesianDetails = hydrated ? readStoredBayesianDetails() : null;
@@ -132,7 +131,6 @@ const effectiveSummaryLine = mlRanButEmpty
       : null,
   ].filter(Boolean).join(' ');
 
-  const coachingTips = deep?.coachingTips ?? [];
   const aiLabel = deep?.meta?.label ?? 'Structured local report';
   const isFallbackContent = deep?.meta?.fallback ?? true;
   const knnLabSignals = deep?.knnSignals?.lab_signals ?? [];
@@ -156,8 +154,6 @@ const effectiveSummaryLine = mlRanButEmpty
       return [diagnosis.id, { confidence, urgency }] as const;
     })
   ) as Record<string, { confidence: ConfidenceAssessment; urgency: UrgencyAssessment }>;
-
-  const urgentDiagnoses = diagnoses.filter((diagnosis) => diagnosisMeta[diagnosis.id]?.urgency.level === 'urgent');
 
   const diagnosisReasoning = Object.fromEntries(
     diagnoses.map((diagnosis) => {
@@ -458,48 +454,21 @@ const effectiveSummaryLine = mlRanButEmpty
       <main className="flex-1 px-5 py-4 pb-10">
         <div className="max-w-lg mx-auto flex flex-col gap-5">
 
-          {/* ── Hero ──────────────────────────────────────────────────────── */}
           <section className="relative overflow-hidden rounded-[2rem] bg-[var(--color-card)] px-5 py-6 shadow-[0_14px_30px_rgba(86,98,145,0.14)]">
             <div className="mb-3">
-              <div>
-                <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--color-ink-soft)]">
-                  Assessment complete
-                </p>
-                <h1 className="editorial-display text-[clamp(2.7rem,10vw,4.8rem)] leading-[0.9] text-[var(--color-ink)]">
-                  YOUR
-                  <br />
-                  ENERGY
-                  <br />
-                  REPORT
-                </h1>
-              </div>
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--color-ink-soft)]">
+                Assessment complete
+              </p>
+              <h1 className="editorial-display text-[clamp(2.5rem,10vw,4.2rem)] leading-[0.92] text-[var(--color-ink)]">
+                Your
+                <br />
+                report
+              </h1>
             </div>
-            <p className="max-w-[16rem] text-sm leading-6 text-[var(--color-ink-soft)]">
+            <p className="max-w-[18rem] text-sm leading-6 text-[var(--color-ink-soft)]">
               {effectiveSummaryLine}
             </p>
-            <div className="mt-6 inline-flex rounded-full bg-[var(--color-lime)] px-4 py-3 text-sm font-bold text-[var(--color-ink)]">
-              {diagnoses.length > 0 ? 'Scroll for the flagged patterns' : 'Scroll for your results'}
-            </div>
-          </section>
-
-          <section className="section-card border-[var(--color-lime)] px-5 py-5">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="pill-tag bg-[var(--color-lime)] text-[var(--color-ink)]">
-                Save this report
-              </span>
-              {profileStatus === 'saved' && (
-                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-ink-soft)]">
-                  Profile ready
-                </span>
-              )}
-            </div>
-            <h2 className="mt-3 text-2xl font-bold tracking-[-0.04em] text-[var(--color-ink)]">
-              Want us to remember this for next time?
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-[var(--color-ink-soft)]">
-              If you consent, we’ll save this report under an anonymous profile so next time you can come back with new labs and compare what changed.
-            </p>
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <button
                 type="button"
                 onClick={saveProfile}
@@ -507,50 +476,26 @@ const effectiveSummaryLine = mlRanButEmpty
                 className="rounded-full bg-[#09090f] px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {profileStatus === 'saved'
-                  ? 'Profile saved'
+                  ? 'Saved'
                   : profileStatus === 'saving'
                     ? 'Saving...'
-                    : 'Consent and save'}
+                    : 'Create account and save your data'}
               </button>
-              <p className="flex items-center text-xs leading-5 text-[var(--color-ink-soft)]">
-                Optional. If you skip this, your data stays only in this browser session.
-              </p>
+              <button
+                type="button"
+                onClick={emailDoctorKit}
+                className="rounded-full border border-[rgba(9,9,15,0.14)] bg-white px-5 py-3 text-sm font-bold text-[var(--color-ink)]"
+              >
+                Email this report
+              </button>
             </div>
             {profileError && (
               <p className="mt-3 text-sm text-[#b34343]">{profileError}</p>
             )}
+            <p className="mt-3 text-xs leading-5 text-[var(--color-ink-soft)]">
+              Optional. If you skip this, your data stays only in this browser session.
+            </p>
           </section>
-
-          {urgentDiagnoses.length > 0 && (
-            <section className="rounded-[1.8rem] border border-[rgba(214,72,72,0.2)] bg-[rgba(214,72,72,0.07)] px-5 py-5 shadow-[0_12px_28px_rgba(214,72,72,0.08)]">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="pill-tag bg-[rgba(214,72,72,0.12)] text-[#8f2222]">
-                  Prompt medical follow-up
-                </span>
-              </div>
-              <h2 className="mt-3 text-2xl font-bold tracking-[-0.04em] text-[var(--color-ink)]">
-                One or more findings should be checked urgently
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-[var(--color-ink-soft)]">
-                Based on the current probabilities and biomarker flags, please contact your doctor promptly about {urgentDiagnoses.map((diagnosis) => diagnosis.title).join(', ')}.
-              </p>
-              <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                <a
-                  href="tel:"
-                  className="rounded-full bg-[#8f2222] px-5 py-3 text-center text-sm font-bold text-white"
-                >
-                  Call your doctor now
-                </a>
-                <button
-                  type="button"
-                  onClick={emailDoctorKit}
-                  className="rounded-full border border-[rgba(214,72,72,0.24)] bg-white px-5 py-3 text-sm font-bold text-[#8f2222]"
-                >
-                  Email this report
-                </button>
-              </div>
-            </section>
-          )}
 
           {isFallbackContent && (
             <div className="section-card border-[var(--color-lime)] px-5 py-4">
@@ -610,9 +555,6 @@ const effectiveSummaryLine = mlRanButEmpty
               <p className="text-sm leading-6 text-[var(--color-ink)]">{deep.recoveryOutlook}</p>
             </div>
           )}
-
-          {/* ── Energy spectrum ───────────────────────────────────────────── */}
-          <EnergySpectrum currentPct={currentPct} projectedPct={projectedPct} />
 
           {/* ── Diagnosis cards ───────────────────────────────────────────── */}
           <div className="flex flex-col gap-3">
@@ -795,33 +737,6 @@ const effectiveSummaryLine = mlRanButEmpty
                   })}
                 </div>
               )}
-            </div>
-          )}
-
-          {/* ── Coaching tips (MedGemma) ──────────────────────────────────── */}
-          {coachingTips.length > 0 && (
-            <div className="section-card px-5 py-5">
-              <div className="mb-3 flex items-center gap-2">
-                <span className="pill-tag bg-[var(--color-lime)] text-[var(--color-ink)]">
-                  Energy coaching · MedGemma
-                </span>
-              </div>
-              <h3 className="mb-4 text-lg font-bold tracking-[-0.03em] text-[var(--color-ink)]">
-                Personalised coaching tips
-              </h3>
-              <div className="space-y-3">
-                {coachingTips.map((tip, i) => (
-                  <div key={i} className="rounded-[1.2rem] bg-[var(--color-card)] px-4 py-4">
-                    <div className="mb-1 flex items-center justify-between gap-2">
-                      <span className="rounded-full bg-[var(--color-accent-soft)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--color-ink)]">
-                        {tip.category}
-                      </span>
-                      <span className="text-[10px] text-[var(--color-ink-soft)]">{tip.timeframe}</span>
-                    </div>
-                    <p className="text-sm leading-6 text-[var(--color-ink)]">{tip.tip}</p>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
 

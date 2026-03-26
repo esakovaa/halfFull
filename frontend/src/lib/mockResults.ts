@@ -726,27 +726,6 @@ function buildDoctorKits(
   });
 }
 
-function buildCoachingTips(diagnoses: Diagnosis[]): NonNullable<LocalDeepResultLike['coachingTips']> {
-  const top = diagnoses[0]?.title ?? 'energy recovery';
-  return [
-    {
-      category: 'Pacing',
-      tip: `Keep activity steady for the next 1-2 weeks instead of pushing through crashes while you investigate ${top.toLowerCase()}.`,
-      timeframe: 'This week',
-    },
-    {
-      category: 'Sleep',
-      tip: 'Protect a consistent sleep and wake window so your symptom pattern is easier to interpret and discuss with your clinician.',
-      timeframe: 'Next 7 days',
-    },
-    {
-      category: 'Tracking',
-      tip: 'Write down your lowest-energy times, major triggers, and any related symptoms so you can bring a cleaner story into the appointment.',
-      timeframe: 'Until your visit',
-    },
-  ];
-}
-
 function buildLocalInsights(
   diagnoses: Diagnosis[],
   tone: 'mock' | 'offline'
@@ -781,7 +760,6 @@ export function buildMockDeepResult(answers: Record<string, unknown>): LocalDeep
     doctorKitArguments: buildDoctorKitArguments(diagnoses),
     recommendedDoctors: buildRecommendedDoctors(diagnoses, doctors),
     doctorKits: buildDoctorKits(diagnoses, doctors),
-    coachingTips: buildCoachingTips(diagnoses),
   };
 }
 
@@ -806,6 +784,5 @@ export function buildOfflineDeepResult(answers: Record<string, unknown>): LocalD
     doctorKitArguments: buildDoctorKitArguments(diagnoses),
     recommendedDoctors: buildRecommendedDoctors(diagnoses, doctors),
     doctorKits: buildDoctorKits(diagnoses, doctors),
-    coachingTips: buildCoachingTips(diagnoses),
   };
 }
