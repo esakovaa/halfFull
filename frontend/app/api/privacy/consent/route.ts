@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   buildHealthDataSummary,
+  normalizeConsentGrantContext,
   persistHealthSession,
   recordConsentAcceptance,
-  validatePrivacyContext,
 } from '@/src/lib/server/privacy';
 import { writeLog } from '@/src/lib/logger';
 
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
       };
     };
 
-    const privacy = validatePrivacyContext(body.privacy);
+    const privacy = normalizeConsentGrantContext(body.privacy);
     await recordConsentAcceptance(privacy, {
       source: body.source ?? 'consent_page',
     });

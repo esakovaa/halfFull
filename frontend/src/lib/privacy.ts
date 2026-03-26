@@ -72,7 +72,7 @@ export function readPrivacyConsent(): PrivacyConsentRecord | null {
     const raw = window.localStorage.getItem(PRIVACY_STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as PrivacyConsentRecord;
-    if (isConsentExpired(parsed)) {
+    if (parsed.consentVersion !== CONSENT_VERSION || isConsentExpired(parsed)) {
       clearStoredHealthData();
       return null;
     }

@@ -13,7 +13,6 @@ import {
 export default function ConsentPage() {
   const router = useRouter();
   const [consentChecked, setConsentChecked] = useState(false);
-  const [retentionChecked, setRetentionChecked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,7 +22,7 @@ export default function ConsentPage() {
     }
   }, [router]);
 
-  const canContinue = consentChecked && retentionChecked && !submitting;
+  const canContinue = consentChecked && !submitting;
 
   const handleContinue = async () => {
     if (!canContinue) return;
@@ -66,65 +65,66 @@ export default function ConsentPage() {
             <Link href="/start" className="text-[var(--color-ink-soft)]">Back</Link>
           </div>
 
-          <section className="rounded-[2rem] bg-[var(--color-card)] px-5 py-6 shadow-[0_14px_30px_rgba(86,98,145,0.14)]">
-            <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--color-ink-soft)]">
-              Consent required
-            </p>
-            <h1 className="text-[1.9rem] font-bold leading-[1.02] tracking-[-0.05em] text-[var(--color-ink)]">
-              Before we handle any health data
-            </h1>
-            <p className="mt-3 text-sm leading-6 text-[var(--color-ink-soft)]">
-              HalfFull creates an anonymous ID, uses your answers to score fatigue-related patterns,
-              and keeps stored health data only for a limited time so you can finish the assessment.
-            </p>
+          <section className="relative overflow-hidden rounded-[2rem] border border-[rgba(151,166,210,0.28)] bg-[linear-gradient(180deg,rgba(248,248,251,0.98),rgba(238,245,224,0.95))] px-5 py-6 shadow-[0_18px_40px_rgba(86,98,145,0.14)]">
+            <div className="absolute -right-8 top-4 h-28 w-28 rounded-full bg-[rgba(215,240,104,0.32)] blur-2xl" />
+            <div className="absolute left-6 top-0 h-20 w-20 rounded-full bg-[rgba(179,224,110,0.18)] blur-2xl" />
+
+            <div className="relative">
+              <span className="inline-flex rounded-full bg-[var(--color-lime)] px-4 py-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--color-ink)]">
+                Privacy and consent
+              </span>
+              <h1 className="mt-4 text-[1.95rem] font-bold leading-[1.02] tracking-[-0.05em] text-[var(--color-ink)]">
+                Before we process your health answers
+              </h1>
+              <p className="mt-4 max-w-[30ch] text-sm leading-6 text-[var(--color-ink-soft)]">
+                We use your answers to generate your fatigue assessment and doctor-ready report.
+              </p>
+
+              <div className="mt-5 rounded-[1.6rem] border border-[rgba(140,170,101,0.24)] bg-white/78 px-4 py-4 backdrop-blur-sm">
+                <p className="text-sm font-semibold text-[var(--color-ink)]">Key points</p>
+                <ul className="mt-3 space-y-2.5 text-sm leading-6 text-[var(--color-ink-soft)]">
+                  <li>Your data is linked to a random anonymous ID, not your name.</li>
+                  <li>It&apos;s stored only temporarily, for up to 24 hours.</li>
+                  <li>You can leave anytime and clear this session data.</li>
+                </ul>
+              </div>
+            </div>
           </section>
 
           <section className="section-card flex flex-col gap-4 px-5 py-5">
-            <div className="rounded-[1.5rem] bg-white/70 px-4 py-4">
-              <p className="text-sm font-semibold text-[var(--color-ink)]">What you’re agreeing to</p>
-              <ul className="mt-3 space-y-2 text-sm leading-6 text-[var(--color-ink-soft)]">
-                <li>We assign a random anonymous ID instead of storing your name, email, or direct identifiers.</li>
-                <li>Your answers and generated report can be stored temporarily for up to 24 hours.</li>
-                <li>You can exit at any time and clear locally stored session data immediately.</li>
-              </ul>
-            </div>
-
-            <label className="flex items-start gap-3 rounded-[1.25rem] border border-[rgba(9,9,15,0.08)] bg-white px-4 py-4">
+            <label className="flex items-start gap-3 rounded-[1.4rem] border border-[rgba(140,170,101,0.24)] bg-[rgba(255,255,255,0.88)] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
               <input
                 type="checkbox"
                 checked={consentChecked}
                 onChange={(event) => setConsentChecked(event.target.checked)}
-                className="mt-1 h-4 w-4 accent-[var(--color-accent)]"
+                className="mt-1 h-4 w-4 accent-[#77b255]"
               />
               <span className="text-sm leading-6 text-[var(--color-ink)]">
-                I explicitly consent to HalfFull processing my health-related answers to generate an assessment and doctor-ready report.
-              </span>
-            </label>
-
-            <label className="flex items-start gap-3 rounded-[1.25rem] border border-[rgba(9,9,15,0.08)] bg-white px-4 py-4">
-              <input
-                type="checkbox"
-                checked={retentionChecked}
-                onChange={(event) => setRetentionChecked(event.target.checked)}
-                className="mt-1 h-4 w-4 accent-[var(--color-accent)]"
-              />
-              <span className="text-sm leading-6 text-[var(--color-ink)]">
-                I understand the data is tied to an anonymous ID, expires automatically, and can be cleared on explicit exit.
+                I agree to HalfFull processing my health-related answers to generate my assessment and report.
               </span>
             </label>
 
             {error && (
-              <p className="text-sm text-[#b34343]">{error}</p>
+              <p className="rounded-[1rem] border border-[rgba(179,67,67,0.14)] bg-[rgba(179,67,67,0.05)] px-3 py-2 text-sm text-[#b34343]">
+                {error}
+              </p>
             )}
 
             <button
               type="button"
               onClick={handleContinue}
               disabled={!canContinue}
-              className="w-full rounded-full bg-[#09090f] px-5 py-4 text-base font-bold text-white disabled:cursor-not-allowed disabled:opacity-45"
+              className="w-full rounded-full bg-[#09090f] px-5 py-4 text-base font-bold text-white transition-transform duration-150 hover:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-45"
             >
-              {submitting ? 'Saving consent...' : 'Agree and continue'}
+              {submitting ? 'Saving consent...' : 'Continue'}
             </button>
+
+            <Link
+              href="/start"
+              className="text-center text-sm font-semibold text-[var(--color-ink-soft)] underline decoration-[rgba(95,103,131,0.35)] underline-offset-4 transition-colors hover:text-[var(--color-ink)]"
+            >
+              Back
+            </Link>
           </section>
         </div>
       </main>
