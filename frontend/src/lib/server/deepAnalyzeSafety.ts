@@ -12,7 +12,7 @@ Rules:
 - Use possibility framing such as "may suggest", "could indicate", and "worth discussing with your doctor"
 - Remove alarmist wording
 - Keep the same overall meaning, specificity, and structure
-- Rewrite these fields when present: personalizedSummary, insights[].personalNote, nextSteps, doctorKitSummary, recommendedDoctors[].reason, doctorKits[].openingSummary
+- Rewrite these fields when present: personalizedSummary, recoveryOutlook, insights[].personalNote, nextSteps, doctorKitSummary, recommendedDoctors[].reason, doctorKits[].openingSummary
 - Do not modify immutable fields such as diagnosisId, doctorKitQuestions, doctorKitArguments, suggestedTests, concerningSymptoms, discussionPoints, priority, specialty
 - Return valid JSON only, same schema as input`;
 
@@ -33,10 +33,13 @@ function mergeWithImmutableFields(
   return {
     ...original,
     personalizedSummary: rewritten.personalizedSummary,
+    summaryPoints: original.summaryPoints,
     insights: original.insights.map((item, index) => ({
       diagnosisId: item.diagnosisId,
       personalNote: rewritten.insights[index]?.personalNote?.trim() || item.personalNote,
     })),
+    declinedSuspicions: original.declinedSuspicions,
+    recoveryOutlook: rewritten.recoveryOutlook ?? original.recoveryOutlook,
     nextSteps: rewritten.nextSteps,
     doctorKitSummary: rewritten.doctorKitSummary ?? original.doctorKitSummary,
     doctorKitQuestions: original.doctorKitQuestions,

@@ -2,7 +2,7 @@
 export const ML_THRESHOLD = 0.40;
 
 /** Maximum number of top conditions passed to the LLM */
-export const ML_TOP_N = 3;
+export const ML_TOP_N = 5;
 
 /**
  * Given a scores record, returns the top conditions to pass to the LLM:

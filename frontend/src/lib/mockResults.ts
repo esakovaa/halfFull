@@ -617,10 +617,16 @@ export function computeResults(answers: Record<string, unknown>): AssessmentResu
 
 export interface LocalDeepResultLike {
   personalizedSummary: string;
+  summaryPoints?: string[];
   insights: Array<{
     diagnosisId: string;
     personalNote: string;
   }>;
+  declinedSuspicions?: Array<{
+    diagnosisId: string;
+    reason: string;
+  }>;
+  recoveryOutlook?: string;
   nextSteps: string;
   doctorKitSummary?: string;
   doctorKitQuestions?: string[];
@@ -760,9 +766,13 @@ export function buildMockDeepResult(answers: Record<string, unknown>): LocalDeep
   const leadingLabel = titles || 'a few subtle energy drivers';
 
   return {
+    summaryPoints: diagnoses.slice(0, 4).map((d) => d.description.split('. ')[0]).filter(Boolean),
     personalizedSummary:
       `Demo mode: this is a stable mock report rather than a live MedGemma response. Based on your assessment, HalfFull would normally focus on ${leadingLabel.toLowerCase()}. ${summaryLine} This report is educational only and not medical advice.`,
     insights: buildLocalInsights(diagnoses, 'mock'),
+    declinedSuspicions: [],
+    recoveryOutlook:
+      `Most people start getting clearer answers once the highest-yield doctor visit and first-line tests are done. If one of the highlighted drivers is confirmed, improvement often follows step by step as treatment becomes more targeted.`,
     nextSteps:
       `Demo next steps: use this report to decide which doctor should review the strongest fatigue signals first, then discuss the most relevant targeted tests for ${leadingLabel.toLowerCase()}. If first-line testing is unrevealing, use the doctor kits below to discuss the next layer of workup.`,
     doctorKitSummary:
@@ -781,9 +791,13 @@ export function buildOfflineDeepResult(answers: Record<string, unknown>): LocalD
   const leadingLabel = titles || 'subtle but actionable patterns';
 
   return {
+    summaryPoints: diagnoses.slice(0, 4).map((d) => d.description.split('. ')[0]).filter(Boolean),
     personalizedSummary:
       `Offline fallback: this report was generated locally because live AI analysis was unavailable. Your answers suggest ${leadingLabel.toLowerCase()} may be worth discussing with your GP. ${summaryLine} This report is educational only and not medical advice.`,
     insights: buildLocalInsights(diagnoses, 'offline'),
+    declinedSuspicions: [],
+    recoveryOutlook:
+      'Even without live AI, the fastest path to clarity is usually a focused doctor visit plus the first round of targeted tests. If those are normal, the report helps you discuss the next layer of workup without starting from scratch.',
     nextSteps:
       'Use the structured report to guide a focused doctor conversation and ask which clinician should review the strongest fatigue drivers first. If symptoms continue despite normal routine bloodwork, discuss the more specific tests and referrals attached to the highest-ranked areas.',
     doctorKitSummary:
