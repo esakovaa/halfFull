@@ -681,7 +681,7 @@ const effectiveSummaryLine = mlRanButEmpty
           )}
 
           {/* ── KNN similar-profile lab signals ───────────────────────────── */}
-          {knnLabSignals.length > 0 && !isFallbackContent && (
+          {knnLabSignals.length > 0 && (
             <div className="section-card px-5 py-4">
               <div className="mb-3">
                 <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-ink)]">

@@ -431,10 +431,14 @@ export async function POST(req: NextRequest) {
       bayesianGainMap[qa.group] = (bayesianGainMap[qa.group] ?? 0) + 1;
     }
   }
-  const topBayesianConditions = Object.entries(bayesianGainMap)
+  // Ordered condition IDs by Bayesian confirming signal count
+  const topBayesianConditionIds = Object.entries(bayesianGainMap)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 3)
-    .map(([group, count]) => `${group} (${count} confirming signal${count > 1 ? 's' : ''} from Bayesian follow-up)`);
+    .map(([group]) => group);
+  const topBayesianConditions = topBayesianConditionIds.map((id, i) =>
+    `${id} (${bayesianGainMap[id]} confirming signal${bayesianGainMap[id] > 1 ? 's' : ''} from Bayesian follow-up)`.concat(i === 0 ? ' ← highest gain' : '')
+  );
 
   // Call 2: Groq narrative synthesis V7
   try {
@@ -452,8 +456,35 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Groq synthesis unavailable' }, { status: 503 });
     }
 
+    // ── Build deterministic personalizedSummary from top Bayesian keySymptoms ──
+    // Pull the top keySymptom from each top Bayesian condition (in confirming-signal order),
+    // then fill remaining slots from other supported suspicions if needed.
+    const topSymptoms: string[] = [];
+    for (const condId of topBayesianConditionIds) {
+      if (topSymptoms.length >= 3) break;
+      const susp = groundingResult.supportedSuspicions.find((s) => s.diagnosisId === condId);
+      const sym = susp?.keySymptoms?.[0];
+      if (sym && !topSymptoms.includes(sym)) topSymptoms.push(sym);
+    }
+    for (const susp of groundingResult.supportedSuspicions) {
+      if (topSymptoms.length >= 3) break;
+      const sym = susp.keySymptoms?.[0];
+      if (sym && !topSymptoms.includes(sym)) topSymptoms.push(sym);
+    }
+
+    let personalizedSummary = synthesisResult.personalizedSummary;
+    if (topSymptoms.length > 0) {
+      const lower = topSymptoms.map((s) => s.charAt(0).toLowerCase() + s.slice(1));
+      const phrase =
+        lower.length === 1 ? lower[0]
+        : lower.length === 2 ? `${lower[0]} and ${lower[1]}`
+        : `${lower[0]}, ${lower[1]}, and ${lower[2]}`;
+      personalizedSummary = `From what you shared, your fatigue is connected to the ${phrase}. This is worth investigating further. Below you can see some hypotheses on the root causes and which doctors to see first, and how to prepare for your visit.`;
+    }
+
     const coveredResult = {
       ...synthesisResult,
+      personalizedSummary,
       declinedSuspicions: ensureCandidateCoverage(flaggedConditions, synthesisResult),
     };
 
