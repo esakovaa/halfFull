@@ -16,6 +16,7 @@ import {
   type UrgencyAssessment,
 } from '@/src/lib/clinicalSignals';
 import { computeResults, buildDiagnosesFromML } from '@/src/lib/mockResults';
+
 import {
   getInsightForDiagnosis,
   readStoredBayesianDetails,
@@ -24,6 +25,7 @@ import {
   readStoredDeepResult,
   readStoredMLScores,
 } from '@/src/lib/medgemma';
+
 import {
   createPrivacyConsentRecord,
   PRIVACY_STORAGE_KEY,
@@ -44,17 +46,35 @@ export default function ResultsPage() {
     setExpandedDoctors((prev) => prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]);
 
   const { currentPct, projectedPct, summaryLine, doctors } = computeResults(answers);
+      
+const mlScores = hydrated ? readStoredMLScores() : null;
+const bayesianDetails = hydrated ? readStoredBayesianDetails() : null;
+const bayesianScores = hydrated ? readStoredBayesianScores() : null;
 
-  // Use ML diagnoses when available (from /api/score run on /processing page),
-  // falling back to rule-based diagnoses from computeResults.
-  const mlScores = hydrated ? readStoredMLScores() : null;
-  const bayesianDetails = hydrated ? readStoredBayesianDetails() : null;
-  const bayesianScores = hydrated ? readStoredBayesianScores() : null;
-  const confirmedConditions = hydrated ? (readStoredConfirmedConditions() ?? []) : [];
-  const diagnoses = mlScores
-    ? buildDiagnosesFromML(mlScores)
-    : computeResults(answers).diagnoses;
+// Bayesian scores reflect clarification answers, so prefer them when present.
+// Fall back to raw ML scores, then to the rule-based results.
+const effectiveScores = bayesianScores ?? mlScores;
+
+const confirmedConditions = hydrated ? (readStoredConfirmedConditions() ?? []) : [];
+const diagnoses = effectiveScores
+  ? buildDiagnosesFromML(effectiveScores)
+  : computeResults(answers).diagnoses;
+
   const biomarkers = extractBiomarkerSnapshot(answers);
+
+  // Detect empty-result scenarios: ML ran but no condition crossed the display threshold.
+  // Distinguish "likely healthy" (all scores very low) from "uncertain cause" (some signal
+  // present but below threshold — e.g. after clarification questions reduced probabilities).
+  const mlRanButEmpty = effectiveScores !== null && diagnoses.length === 0;
+  const maxScore = effectiveScores ? Math.max(0, ...Object.values(effectiveScores)) : 0;
+  const isLikelyHealthy = mlRanButEmpty && maxScore < 0.20;
+
+  // Override the rule-based summaryLine when ML ran but found nothing.
+  const effectiveSummaryLine = mlRanButEmpty
+    ? (isLikelyHealthy
+      ? 'No concerning energy patterns found — your profile looks reassuring.'
+      : 'Your assessment shows some low-level signals, but nothing points to a specific cause.')
+    : summaryLine;
 
   // Load deep analysis result from session storage (written by /processing)
   useEffect(() => {
@@ -282,7 +302,7 @@ export default function ResultsPage() {
 
     // ── Title ────────────────────────────────────────────────────────────
     addText('Your Energy Report', { size: 22, bold: true, lineH: 10 });
-    addText(summaryLine, { size: 10, color: SOFT, lineH: 6 });
+    addText(effectiveSummaryLine, { size: 10, color: SOFT, lineH: 6 });
     y += 4;
 
     // ── Opening statement ────────────────────────────────────────────────
@@ -305,9 +325,18 @@ export default function ResultsPage() {
 
     // ── Flagged areas ────────────────────────────────────────────────────
     addSectionHeader('Flagged areas');
-    diagnoses.slice(0, 5).forEach((d) => {
-      addBullet(`${d.title} — ${d.signal} signal`);
-    });
+    if (diagnoses.length > 0) {
+      diagnoses.slice(0, 5).forEach((d) => {
+        addBullet(`${d.title} — ${d.signal} signal`);
+      });
+    } else {
+      addText(
+        isLikelyHealthy
+          ? 'No concerning patterns detected. Your profile showed no strong signals above the assessment threshold.'
+          : 'No specific cause identified. Low-level signals were present but did not reach a confident finding after clarification.',
+        { size: 10, indent: 2 }
+      );
+    }
     y += 2;
 
     // ── Next steps ───────────────────────────────────────────────────────
@@ -376,11 +405,13 @@ export default function ResultsPage() {
       [
         'Here is my HalfFull summary for our appointment.',
         '',
-        summaryLine,
+        effectiveSummaryLine,
         '',
         ...(doctorKitOpener ? ['Opening statement:', doctorKitOpener, ''] : []),
         'Concerning patterns:',
-        ...diagnoses.slice(0, 4).map((d) => `- ${d.title}`),
+        ...(diagnoses.length > 0
+          ? diagnoses.slice(0, 4).map((d) => `- ${d.title}`)
+          : [isLikelyHealthy ? '- No concerning patterns detected' : '- No specific cause identified']),
         '',
         'Next steps:',
         ...(deep?.nextSteps ? [deep.nextSteps, ''] : []),
@@ -447,10 +478,10 @@ export default function ResultsPage() {
               </div>
             </div>
             <p className="max-w-[16rem] text-sm leading-6 text-[var(--color-ink-soft)]">
-              {summaryLine}
+              {effectiveSummaryLine}
             </p>
             <div className="mt-6 inline-flex rounded-full bg-[var(--color-lime)] px-4 py-3 text-sm font-bold text-[var(--color-ink)]">
-              Scroll for the flagged patterns
+              {diagnoses.length > 0 ? 'Scroll for the flagged patterns' : 'Scroll for your results'}
             </div>
           </section>
 
@@ -579,29 +610,67 @@ export default function ResultsPage() {
           <div className="flex flex-col gap-3">
             <div>
               <h2 className="text-2xl font-bold tracking-[-0.04em] text-[var(--color-ink)]">
-                Areas worth checking
+                {diagnoses.length > 0 ? 'Areas worth checking' : isLikelyHealthy ? 'Looking good' : 'Pattern unclear'}
               </h2>
               <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-                Tap each to see recommended tests and recovery outlook.
+                {diagnoses.length > 0
+                  ? 'Tap each to see recommended tests and recovery outlook.'
+                  : isLikelyHealthy
+                    ? 'Your answers show no strong signals pointing to an underlying energy issue.'
+                    : 'Your answers show some fatigue signals, but they don\'t point clearly to a specific cause.'}
               </p>
             </div>
-            {diagnoses.map((d, i) => (
-              <DiagnosisCard
-                key={d.id}
-                diagnosis={d}
-                rank={i + 1}
-                personalNote={getInsightForDiagnosis(deep, d.id)}
-                confidence={{
-                  tier: diagnosisMeta[d.id]?.confidence.tier ?? 'low',
-                  summary: diagnosisMeta[d.id]?.confidence.summary ?? 'Limited evidence available.',
-                }}
-                urgency={{
-                  level: diagnosisMeta[d.id]?.urgency.level ?? 'routine',
-                  summary: diagnosisMeta[d.id]?.urgency.reasons[0] ?? 'Routine follow-up is appropriate.',
-                }}
-                reasoningTrace={diagnosisReasoning[d.id]}
-              />
-            ))}
+{diagnoses.length > 0 ? (
+  diagnoses.map((d, i) => (
+    <DiagnosisCard
+      key={d.id}
+      diagnosis={d}
+      rank={i + 1}
+      personalNote={getInsightForDiagnosis(deep, d.id)}
+      confidence={{
+        tier: diagnosisMeta[d.id]?.confidence.tier ?? 'low',
+        summary: diagnosisMeta[d.id]?.confidence.summary ?? 'Limited evidence available.',
+      }}
+      urgency={{
+        level: diagnosisMeta[d.id]?.urgency.level ?? 'routine',
+        summary: diagnosisMeta[d.id]?.urgency.reasons[0] ?? 'Routine follow-up is appropriate.',
+      }}
+      reasoningTrace={diagnosisReasoning[d.id]}
+    />
+  ))
+) : mlRanButEmpty ? (
+  <div className="rounded-[1.6rem] bg-[var(--color-card)] px-5 py-6 shadow-[0_14px_30px_rgba(86,98,145,0.1)]">
+    {isLikelyHealthy ? (
+      <>
+        <p className="mb-3 text-4xl">✅</p>
+        <h3 className="mb-2 text-lg font-bold tracking-[-0.03em] text-[var(--color-ink)]">
+          No concerning patterns detected
+        </h3>
+        <p className="text-sm leading-6 text-[var(--color-ink-soft)]">
+          Based on your answers, none of the 11 health models identified a likely underlying cause for fatigue. This is a reassuring result.
+        </p>
+        <p className="mt-3 text-sm leading-6 text-[var(--color-ink-soft)]">
+          If you do experience fatigue in daily life, a routine check-up with your GP is still a sensible step - some causes only become visible through blood tests.
+        </p>
+      </>
+    ) : (
+      <>
+        <p className="mb-3 text-4xl">🔍</p>
+        <h3 className="mb-2 text-lg font-bold tracking-[-0.03em] text-[var(--color-ink)]">
+          No specific cause identified
+        </h3>
+        <p className="text-sm leading-6 text-[var(--color-ink-soft)]">
+          Your answers contain some energy-related signals, but after the full assessment - including clarification questions - none of the 11 models reached the threshold for a confident finding.
+        </p>
+        <p className="mt-3 text-sm leading-6 text-[var(--color-ink-soft)]">
+          This can happen when fatigue has multiple small contributing factors, or when key lab values (which were not uploaded) would be needed to confirm a pattern. A GP visit with targeted bloodwork is the recommended next step.
+        </p>
+      </>
+    )}
+  </div>
+) : null}
+
+            
           </div>
 
           {/* ── Next steps + doctor cards ─────────────────────────────────── */}
