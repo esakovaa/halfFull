@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAssessment } from '@/src/hooks/useAssessment';
+import { ExitAssessmentButton } from '@/src/components/ExitAssessmentButton';
 import {
   createOfflineDeepResult,
   getConfiguredAiMode,
@@ -37,7 +38,7 @@ export default function ProcessingPage() {
       setStepIndex((current) => (current + 1) % loadingMessages.length);
     }, 1200);
     return () => window.clearInterval(interval);
-  }, [hydrated]);
+  }, [hydrated, router]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -114,6 +115,10 @@ export default function ProcessingPage() {
             <p className="mt-3 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-ink-soft)]">
               {aiMode === 'live' ? 'Mode: live with automatic demo fallback' : `Mode: ${aiMode}`}
             </p>
+            <ExitAssessmentButton
+              label="Exit and clear data"
+              className="mt-4 inline-flex rounded-full border border-[rgba(9,9,15,0.08)] px-4 py-2 text-xs font-semibold text-[var(--color-ink)]"
+            />
 
             <div className="mx-auto mt-6 h-3 w-56 rounded-full bg-[rgba(151,166,210,0.2)] p-[3px]">
               <div
