@@ -390,7 +390,9 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const promptCalibrationSignals: PromptCalibrationSignal[] = topConditions.map(([conditionId]) => {
+  const promptCalibrationSignals: PromptCalibrationSignal[] = evalMode === 'medgemma_only'
+    ? []
+    : topConditions.map(([conditionId]) => {
     const rawMlScore = rawMlScores?.[conditionId] ?? mlScores?.[conditionId] ?? 0;
     const effectiveScore = mlScores?.[conditionId] ?? rawMlScore;
     const confidence = computeConfidence({
@@ -416,7 +418,7 @@ export async function POST(req: NextRequest) {
       confidenceSummary: confidence.summary,
       urgencySummary: urgency.reasons[0] ?? urgency.cta,
     };
-  });
+    });
   const riskCalibrationText = buildRiskCalibrationText(promptCalibrationSignals);
   const overallUrgency: UrgencyLevel =
     promptCalibrationSignals.some((signal) => signal.urgencyLevel === 'urgent')
@@ -520,7 +522,10 @@ export async function POST(req: NextRequest) {
     knnLabText,
     prioritizedConditions: flaggedConditions,
     confirmedConditions,
-    riskCalibrationText,
+    riskCalibrationText: evalMode === 'medgemma_only' ? null : riskCalibrationText,
+    candidateSourceLabel: evalMode === 'medgemma_only'
+      ? 'Review these candidate conditions for this quiz-only eval arm. ML scores are intentionally withheld:'
+      : undefined,
   });
 
   let groundingResult: MedGemmaGroundingResult = {
