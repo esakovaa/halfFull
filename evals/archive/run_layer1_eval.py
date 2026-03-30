@@ -231,16 +231,17 @@ def _build_raw_inputs_from_nhanes(profile: dict) -> dict[str, Any]:
         # Users upload a Clinical Chemistry & Urinalysis report containing ONLY:
         # lipid panel (total cholesterol, LDL, HDL, triglycerides), fasting
         # glucose, and urine dipstick (protein, glucose, RBC, WBC, nitrite).
-        # These are not present as numeric values in NHANES 2003-2006, so all
-        # lab fields are None here.  All other clinical chemistry labs
-        # (ferritin, HbA1c, creatinine, CRP, liver enzymes, electrolytes,
-        # vitamin D, vitamin B12, etc.) are also not available from the report
-        # and must be null — the model cannot use them at inference time.
-        "total_cholesterol_mg_dl":    None,
-        "ldl_mg_dl":                  None,
-        "hdl_mg_dl":                  None,
-        "triglycerides_mg_dl":        None,
-        "fasting_glucose_mg_dl":      None,
+        # For the balanced NHANES cohort we now thread through the real lipid /
+        # glucose / UACR / WBC / total-protein values when the source dataset has
+        # them for this SEQN. Anything not captured in NHANES remains null.
+        "total_cholesterol_mg_dl":    ni.get("total_cholesterol_mg_dl", labs.get("total_cholesterol_mg_dl")),
+        "ldl_mg_dl":                  ni.get("ldl_mg_dl", labs.get("ldl_mg_dl")),
+        "ldl_cholesterol_mg_dl":      ni.get("ldl_cholesterol_mg_dl", labs.get("ldl_cholesterol_mg_dl")),
+        "hdl_mg_dl":                  ni.get("hdl_mg_dl", labs.get("hdl_mg_dl")),
+        "hdl_cholesterol_mg_dl":      ni.get("hdl_cholesterol_mg_dl", labs.get("hdl_cholesterol_mg_dl")),
+        "triglycerides_mg_dl":        ni.get("triglycerides_mg_dl", labs.get("triglycerides_mg_dl")),
+        "fasting_glucose_mg_dl":      ni.get("fasting_glucose_mg_dl", labs.get("fasting_glucose_mg_dl")),
+        "uacr_mg_g":                  ni.get("uacr_mg_g", labs.get("uacr_mg_g")),
         "urine_protein":              None,
         "urine_glucose":              None,
         "urine_rbc":                  None,
@@ -255,8 +256,8 @@ def _build_raw_inputs_from_nhanes(profile: dict) -> dict[str, Any]:
         "ast_u_l":                    None,
         "ggt_u_l":                    None,
         "serum_albumin_g_dl":         None,
-        "wbc_1000_cells_ul":          None,
-        "total_protein_g_dl":         None,
+        "wbc_1000_cells_ul":          ni.get("wbc_1000_cells_ul", labs.get("wbc_1000_cells_ul")),
+        "total_protein_g_dl":         ni.get("total_protein_g_dl", labs.get("total_protein_g_dl")),
         "vitamin_d_25oh_nmol_l":      None,
         "vitamin_b12_serum_pg_ml":    None,
         "transferrin_saturation_pct": None,

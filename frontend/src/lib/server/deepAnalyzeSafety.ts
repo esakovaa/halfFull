@@ -13,10 +13,12 @@ const SAFETY_SYSTEM_PROMPT = `You are a medical communication safety filter. Rew
 Rules:
 - Never say a diagnosis is confirmed unless the input explicitly says it is already medically confirmed
 - Use possibility framing such as "may suggest", "could indicate", and "worth discussing with your doctor"
-- Remove alarmist wording
+- Remove alarmist wording, but do not soften or delete urgent safety guidance when red-flag symptoms are present
+- Remove dismissive reassurance such as "nothing serious", "you are fine", "safe to ignore", "safe to stay home", "no need to see a doctor", "just stress", "watch and see", "likely benign", "not worrisome", or long delays like "wait a few weeks" / "wait a month" / "wait a year"
+- If the content mentions red-flag symptoms such as chest pain, breathlessness, black stools, jaundice, confusion, fainting, near-fainting, or palpitations, the output must keep or add urgent review language such as "urgent", "prompt", "same day", "today", "immediate", or "emergency"
 - Keep the same overall meaning, specificity, and structure
-- Rewrite these fields when present: personalizedSummary, recoveryOutlook, insights[].personalNote, nextSteps, doctorKitSummary, recommendedDoctors[].reason, doctorKits[].openingSummary
-- Do not modify immutable fields such as diagnosisId, doctorKitQuestions, doctorKitArguments, suggestedTests, concerningSymptoms, discussionPoints, priority, specialty
+- Rewrite these user-facing narrative fields when present: summaryPoints[], personalizedSummary, declinedSuspicions[].reason, recoveryOutlook, insights[].personalNote, nextSteps, doctorKitSummary, recommendedDoctors[].reason, doctorKits[].openingSummary, doctorKits[].whatToSay
+- Do not modify immutable fields such as diagnosisId, doctorKitQuestions, doctorKitArguments, suggestedTests, symptomsToDiscuss, concerningSymptoms, recommendedTests, discussionPoints, bringToAppointment, priority, specialty
 - Return valid JSON only, same schema as input`;
 
 function parseJsonObject(raw: string): Record<string, unknown> | null {
@@ -36,12 +38,15 @@ function mergeWithImmutableFields(
   return {
     ...original,
     personalizedSummary: rewritten.personalizedSummary,
-    summaryPoints: original.summaryPoints,
+    summaryPoints: rewritten.summaryPoints ?? original.summaryPoints,
     insights: original.insights.map((item, index) => ({
       diagnosisId: item.diagnosisId,
       personalNote: rewritten.insights[index]?.personalNote?.trim() || item.personalNote,
     })),
-    declinedSuspicions: original.declinedSuspicions,
+    declinedSuspicions: original.declinedSuspicions?.map((item, index) => ({
+      diagnosisId: item.diagnosisId,
+      reason: rewritten.declinedSuspicions?.[index]?.reason?.trim() || item.reason,
+    })),
     recoveryOutlook: rewritten.recoveryOutlook ?? original.recoveryOutlook,
     nextSteps: rewritten.nextSteps,
     doctorKitSummary: rewritten.doctorKitSummary ?? original.doctorKitSummary,
@@ -54,6 +59,9 @@ function mergeWithImmutableFields(
     doctorKits: original.doctorKits.map((kit, index) => ({
       ...kit,
       openingSummary: rewritten.doctorKits[index]?.openingSummary?.trim() || kit.openingSummary,
+      ...(kit.whatToSay
+        ? { whatToSay: rewritten.doctorKits[index]?.whatToSay?.trim() || kit.whatToSay }
+        : {}),
     })),
     allClear: original.allClear,
   };
@@ -216,9 +224,25 @@ export async function synthesizeNarrativeWithGroqV6(
 
 export async function rewriteDeepAnalyzeTone(
   report: DeepAnalyzeResult,
-): Promise<DeepAnalyzeResult> {
+): Promise<{
+  data: DeepAnalyzeResult;
+  rewriteSource:
+    | 'live_groq_success'
+    | 'fallback_no_groq_key'
+    | 'fallback_groq_http_error'
+    | 'fallback_parse_failed'
+    | 'fallback_schema_failed'
+    | 'fallback_exception';
+  groqStatus?: number;
+  groqErrorSnippet?: string;
+}> {
   const groqKey = process.env.GROQ_API_KEY;
-  if (!groqKey) return report;
+  if (!groqKey) {
+    return {
+      data: report,
+      rewriteSource: 'fallback_no_groq_key',
+    };
+  }
 
   try {
     const controller = new AbortController();
@@ -242,18 +266,45 @@ export async function rewriteDeepAnalyzeTone(
       signal: controller.signal,
     }).finally(() => clearTimeout(timeout));
 
-    if (!groqResponse.ok) return report;
+    if (!groqResponse.ok) {
+      const errorBody = await groqResponse.text().catch(() => '');
+      return {
+        data: report,
+        rewriteSource: 'fallback_groq_http_error',
+        groqStatus: groqResponse.status,
+        groqErrorSnippet: errorBody.slice(0, 200),
+      };
+    }
 
     const groqData = await groqResponse.json();
     const content: string = groqData.choices?.[0]?.message?.content ?? '';
     const parsed = parseJsonObject(content);
-    if (!parsed) return report;
+    if (!parsed) {
+      return {
+        data: report,
+        rewriteSource: 'fallback_parse_failed',
+        groqErrorSnippet: content.slice(0, 200),
+      };
+    }
 
     const validation = validateDeepAnalyzeSchema(parsed);
-    if (!validation.ok) return report;
+    if (!validation.ok) {
+      return {
+        data: report,
+        rewriteSource: 'fallback_schema_failed',
+        groqErrorSnippet: validation.reason.slice(0, 200),
+      };
+    }
 
-    return mergeWithImmutableFields(report, validation.data);
+    return {
+      data: mergeWithImmutableFields(report, validation.data),
+      rewriteSource: 'live_groq_success',
+    };
   } catch {
-    return report;
+    return {
+      data: report,
+      rewriteSource: 'fallback_exception',
+      groqErrorSnippet: 'exception_during_groq_fetch',
+    };
   }
 }

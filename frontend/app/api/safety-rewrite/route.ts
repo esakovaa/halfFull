@@ -13,7 +13,26 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const rewritten = await rewriteDeepAnalyzeTone(inputValidation.data);
-  const { data: safeData } = applyHardSafetyRules(rewritten);
-  return NextResponse.json(safeData);
+  const rewriteResult = await rewriteDeepAnalyzeTone(inputValidation.data);
+  const safetyResult = applyHardSafetyRules(rewriteResult.data);
+  const response = NextResponse.json(safetyResult.data);
+  response.headers.set('x-safety-rewrite-source', rewriteResult.rewriteSource);
+  if (rewriteResult.groqStatus !== undefined) {
+    response.headers.set('x-safety-groq-status', String(rewriteResult.groqStatus));
+  }
+  if (rewriteResult.groqErrorSnippet) {
+    response.headers.set(
+      'x-safety-groq-error-snippet',
+      encodeURIComponent(rewriteResult.groqErrorSnippet),
+    );
+  }
+  response.headers.set(
+    'x-safety-hard-rules-applied',
+    safetyResult.warnings.length > 0 ? 'true' : 'false',
+  );
+  response.headers.set(
+    'x-safety-hard-rule-count',
+    String(safetyResult.warnings.length),
+  );
+  return response;
 }
