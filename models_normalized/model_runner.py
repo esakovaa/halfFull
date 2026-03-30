@@ -68,7 +68,7 @@ _ROOT = _DIR.parent
 # ── Registry — v2 normalised models ────────────────────────────────────────────
 
 MODEL_REGISTRY = {
-    "anemia":                "anemia_lr_deduped38_L2_C005_v3.joblib",
+    "anemia":                "anemia_lr_deduped35_L2_C1_v4.joblib",
     "electrolyte_imbalance": "electrolyte_imbalance_lr_deduped28_L2_v2.joblib",
     "kidney":                "kidney_lr_deduped17_L2_v2.joblib",
     "liver":                 "liver_rf_cal_deduped19_v2.joblib",
