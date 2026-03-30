@@ -34,7 +34,7 @@ EVALS_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = EVALS_DIR.parent
 RESULTS_DIR = EVALS_DIR / "results"
 REPORTS_DIR = EVALS_DIR / "reports"
-PROFILES_PATH = EVALS_DIR / "cohort" / "nhanes_balanced_650.json"
+PROFILES_PATH = EVALS_DIR / "cohort" / "nhanes_balanced_760.json"
 
 sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(EVALS_DIR))
@@ -80,6 +80,7 @@ ABSENT_NEIGHBOUR_MAP: dict[str, list[str]] = {
 @dataclass
 class EvalConfig:
     base_url: str
+    eval_secret: str | None
     profiles_path: Path
     output_dir: Path
     reports_dir: Path
@@ -93,7 +94,8 @@ class EvalConfig:
 
 def parse_args() -> EvalConfig:
     parser = argparse.ArgumentParser(description="Run 3-arm quiz-only eval on the NHANES balanced cohort.")
-    parser.add_argument("--base-url", default="http://127.0.0.1:3000", help="Base URL of the local Next app.")
+    parser.add_argument("--base-url", default="http://127.0.0.1:3000", help="Base URL of the Next app or Vercel preview deployment.")
+    parser.add_argument("--eval-secret", default=None, help="Secret required for the protected medgemma_only eval mode.")
     parser.add_argument("--profiles", type=Path, default=PROFILES_PATH, help="Balanced NHANES cohort path.")
     parser.add_argument("--output", type=Path, default=RESULTS_DIR, help="JSON output directory.")
     parser.add_argument("--reports", type=Path, default=REPORTS_DIR, help="Markdown output directory.")
@@ -106,6 +108,7 @@ def parse_args() -> EvalConfig:
     args = parser.parse_args()
     return EvalConfig(
         base_url=args.base_url.rstrip("/"),
+        eval_secret=args.eval_secret,
         profiles_path=args.profiles,
         output_dir=args.output,
         reports_dir=args.reports,
@@ -238,12 +241,20 @@ def top5_scores(scores: dict[str, float]) -> dict[str, float]:
     return dict(list(sorted(scores.items(), key=lambda item: item[1], reverse=True)[:5]))
 
 
-def post_json(url: str, payload: dict[str, Any], timeout: float) -> tuple[int, Any]:
+def post_json(
+    url: str,
+    payload: dict[str, Any],
+    timeout: float,
+    extra_headers: dict[str, str] | None = None,
+) -> tuple[int, Any]:
     data = json.dumps(payload).encode("utf-8")
+    headers = {"Content-Type": "application/json"}
+    if extra_headers:
+        headers.update(extra_headers)
     req = urllib_request.Request(
         url,
         data=data,
-        headers={"Content-Type": "application/json"},
+        headers=headers,
         method="POST",
     )
     try:
@@ -324,7 +335,17 @@ def evaluate_deep_analyze_arm(
         }
 
     try:
-        status_code, parsed = post_json(f"{config.base_url}/api/deep-analyze", payload, config.timeout)
+        extra_headers = (
+            {"x-eval-mode-secret": config.eval_secret}
+            if payload.get("evalMode") == "medgemma_only" and config.eval_secret
+            else None
+        )
+        status_code, parsed = post_json(
+            f"{config.base_url}/api/deep-analyze",
+            payload,
+            config.timeout,
+            extra_headers=extra_headers,
+        )
     except (urllib_error.URLError, TimeoutError, OSError) as exc:
         return {
             "parse_success": False,
@@ -466,6 +487,7 @@ def build_markdown(run_id: str, config: EvalConfig, sample_profiles_list: list[d
     lines.append(f"- Sample size: `{len(sample_profiles_list)}`")
     lines.append(f"- Sampling: `{config.sample_per_condition}` per condition, up to `{config.multi_per_condition}` multi-condition cases per target, `{config.healthy_n}` healthy")
     lines.append(f"- API base URL: `{config.base_url}`")
+    lines.append(f"- Protected eval mode: `{'enabled' if config.eval_secret else 'disabled'}`")
     lines.append("")
     lines.append("## Arm Summary")
     lines.append("")
@@ -504,6 +526,7 @@ def build_markdown(run_id: str, config: EvalConfig, sample_profiles_list: list[d
     lines.append("## Notes")
     lines.append("")
     lines.append("- `MedGemma-only` uses the live `/api/deep-analyze` path with quiz answers only and an eval-specific prompt mode that withholds ML scores.")
+    lines.append("- On protected preview deployments, pass `--eval-secret` so the runner can access the guarded `medgemma_only` route.")
     lines.append("- `Hybrid` passes only the top-5 model scores to the same route.")
     lines.append("- `healthy over-alert` counts any surfaced diagnosis on healthy profiles.")
     lines.append("- `neighbour false positive` measures how often a condition appears on clinically adjacent profiles where it is absent.")

@@ -42,6 +42,8 @@ const HF_MODEL = 'google/medgemma-1.5-4b-it';
 const HF_API_URL = process.env.HF_ENDPOINT_URL
   ? `${process.env.HF_ENDPOINT_URL}/v1/chat/completions`
   : 'https://router.huggingface.co/v1/chat/completions';
+const EVAL_MODE_SECRET = process.env.EVAL_MODE_SECRET;
+const EVAL_MODE_HEADER = 'x-eval-mode-secret';
 
 type PromptCalibrationSignal = {
   conditionId: string;
@@ -159,6 +161,24 @@ export async function POST(req: NextRequest) {
   const rawMlScores: Record<string, number> | undefined = body.rawMlScores;
   const evalMode: 'default' | 'medgemma_only' =
     body.evalMode === 'medgemma_only' ? 'medgemma_only' : 'default';
+  const evalHeaderSecret = req.headers.get(EVAL_MODE_HEADER);
+
+  if (evalMode === 'medgemma_only') {
+    if (!EVAL_MODE_SECRET) {
+      return NextResponse.json(
+        { error: 'medgemma_only eval mode is disabled on this deployment.' },
+        { status: 403 }
+      );
+    }
+
+    if (evalHeaderSecret !== EVAL_MODE_SECRET) {
+      return NextResponse.json(
+        { error: 'Invalid eval mode secret.' },
+        { status: 403 }
+      );
+    }
+  }
+
   const evalCandidateConditions: string[] = Array.isArray(body.evalCandidateConditions)
     ? body.evalCandidateConditions.map((value: unknown) => String(value)).filter(Boolean)
     : [];
