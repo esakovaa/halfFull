@@ -61,6 +61,10 @@ CYCLE_CONFIG: dict[str, dict[str, Any]] = {
         ),
         "laboratory": (
             FileSpec("biochem", ("L40_C",), ("SEQN", "LBXSCR", "LBXSATSI", "LBXSASSI", "LBXSGTSI", "LBXSAL", "LBXSNASI", "LBXSKSI", "LBXSCA", "LBXSTP")),
+            FileSpec("lipids", ("L13_C",), ("SEQN", "LBXTC", "LBXHDD")),
+            FileSpec("fasting_glucose", ("L10AM_C",), ("SEQN", "LBXGLU")),
+            FileSpec("trigly_ldl", ("L13AM_C",), ("SEQN", "LBXTR", "LBDLDL")),
+            FileSpec("urine_albumin_creatinine", ("L16_C",), ("SEQN", "URXUMA", "URXUMS", "URXUCR")),
             FileSpec("iron", ("L40FE_C",), ("SEQN", "LBDPCT")),
             FileSpec("ferritin", ("L06TFR_C",), ("SEQN", "LBDFER")),
             FileSpec("vit_b12", ("L06NB_C",), ("SEQN", "LBXB12", "LBDB12SI")),
@@ -99,6 +103,11 @@ CYCLE_CONFIG: dict[str, dict[str, Any]] = {
         ),
         "laboratory": (
             FileSpec("biochem", ("BIOPRO_D",), ("SEQN", "LBXSCR", "LBXSATSI", "LBXSASSI", "LBXSGTSI", "LBXSAL", "LBXSNASI", "LBXSKSI", "LBXSCA", "LBXSTP")),
+            FileSpec("total_cholesterol", ("TCHOL_D",), ("SEQN", "LBXTC")),
+            FileSpec("hdl", ("HDL_D",), ("SEQN", "LBDHDD")),
+            FileSpec("glucose", ("GLU_D",), ("SEQN", "LBXGLU")),
+            FileSpec("trigly_ldl", ("TRIGLY_D",), ("SEQN", "LBXTR", "LBDLDL")),
+            FileSpec("urine_albumin_creatinine", ("ALB_CR_D",), ("SEQN", "URXUMA", "URXUMS", "URXUCR")),
             FileSpec("iron", ("FETIB_D",), ("SEQN", "LBDPCT")),
             FileSpec("ferritin", ("FERTIN_D",), ("SEQN", "LBXFER")),
             FileSpec("vit_b12", ("B12_D",), ("SEQN", "LBXB12", "LBDB12SI")),
@@ -199,6 +208,15 @@ RENAME_MAP = {
     "LBXSKSI": "potassium_mmol_l",
     "LBXSCA": "calcium_mg_dl",
     "LBXSTP": "total_protein_g_dl",
+    "LBXTC": "total_cholesterol_mg_dl",
+    "LBXHDD": "hdl_cholesterol_mg_dl",
+    "LBDHDD": "hdl_cholesterol_mg_dl",
+    "LBXTR": "triglycerides_mg_dl",
+    "LBDLDL": "ldl_cholesterol_mg_dl",
+    "LBXGLU": "fasting_glucose_mg_dl",
+    "URXUMA": "urine_albumin_ug_ml",
+    "URXUMS": "urine_albumin_mg_l",
+    "URXUCR": "urine_creatinine_mg_dl",
     "LBDPCT": "transferrin_saturation_pct",
     "LBDFER": "ferritin_ng_ml",
     "LBXFER": "ferritin_ng_ml",
@@ -415,6 +433,12 @@ def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     out["SEQN"] = pd.to_numeric(out["SEQN"], errors="coerce").astype("Int64")
     out["gender"] = out["gender_code"].map({1: "Male", 2: "Female"}) if "gender_code" in out.columns else pd.NA
     out["cycle"] = out["cycle"].astype("string")
+    if "urine_albumin_mg_l" not in out.columns and "urine_albumin_ug_ml" in out.columns:
+        out["urine_albumin_mg_l"] = pd.to_numeric(out["urine_albumin_ug_ml"], errors="coerce")
+    if "urine_albumin_mg_l" in out.columns and "urine_creatinine_mg_dl" in out.columns:
+        albumin_mg_l = pd.to_numeric(out["urine_albumin_mg_l"], errors="coerce")
+        creatinine_mg_dl = pd.to_numeric(out["urine_creatinine_mg_dl"], errors="coerce")
+        out["uacr_mg_g"] = albumin_mg_l / (creatinine_mg_dl * 0.01)
     if "crp_mg_dl" in out.columns:
         out["crp_mg_l"] = pd.to_numeric(out["crp_mg_dl"], errors="coerce") * 10.0
     return out
@@ -760,6 +784,14 @@ def build_profiles(df: pd.DataFrame) -> list[dict[str, Any]]:
                 },
                 "symptom_vector": symptom_vector,
                 "lab_values": {
+                    "total_cholesterol_mg_dl": None if pd.isna(row_s.get("total_cholesterol_mg_dl")) else round(float(row_s["total_cholesterol_mg_dl"]), 2),
+                    "hdl_cholesterol_mg_dl": None if pd.isna(row_s.get("hdl_cholesterol_mg_dl")) else round(float(row_s["hdl_cholesterol_mg_dl"]), 2),
+                    "ldl_cholesterol_mg_dl": None if pd.isna(row_s.get("ldl_cholesterol_mg_dl")) else round(float(row_s["ldl_cholesterol_mg_dl"]), 2),
+                    "triglycerides_mg_dl": None if pd.isna(row_s.get("triglycerides_mg_dl")) else round(float(row_s["triglycerides_mg_dl"]), 2),
+                    "fasting_glucose_mg_dl": None if pd.isna(row_s.get("fasting_glucose_mg_dl")) else round(float(row_s["fasting_glucose_mg_dl"]), 2),
+                    "uacr_mg_g": None if pd.isna(row_s.get("uacr_mg_g")) else round(float(row_s["uacr_mg_g"]), 2),
+                    "wbc_1000_cells_ul": None if pd.isna(row_s.get("wbc_1000_cells_ul")) else round(float(row_s["wbc_1000_cells_ul"]), 2),
+                    "total_protein_g_dl": None if pd.isna(row_s.get("total_protein_g_dl")) else round(float(row_s["total_protein_g_dl"]), 2),
                     "ferritin": None if pd.isna(row_s.get("ferritin_ng_ml")) else round(float(row_s["ferritin_ng_ml"]), 2),
                     "vitamin_b12": None if pd.isna(row_s.get("vitamin_b12_serum_pg_ml")) else round(float(row_s["vitamin_b12_serum_pg_ml"]), 2),
                     "vitamin_d": None if pd.isna(row_s.get("vitamin_d_25oh_nmol_l")) else round(float(row_s["vitamin_d_25oh_nmol_l"]), 2),

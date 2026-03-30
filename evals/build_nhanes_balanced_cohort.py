@@ -285,7 +285,63 @@ def _nhanes_inputs(row: pd.Series, activity: str, smoking_raw: str) -> dict[str,
     _act_to_sed = {"sedentary": 540, "low": 360, "moderate": 240, "high": 120, "unknown": 300}
     pad680 = _act_to_sed.get(activity, 300) + int((_unit_noise(seqn, "pad680") - 0.5) * 120)
 
-    return {
+    chol = _num(row, "total_cholesterol_mg_dl") or 185.8
+    hdl = _num(row, "hdl_cholesterol_mg_dl") or 53.0
+    ldl = _num(row, "ldl_cholesterol_mg_dl") or 110.0
+    trig = _num(row, "triglycerides_mg_dl") or 108.0
+    gluc = _num(row, "fasting_glucose_mg_dl") or 100.0
+    uacr = _num(row, "uacr_mg_g") or 5.0
+    wbc = _num(row, "wbc_1000_cells_ul") or 7.0
+    total_protein = _num(row, "total_protein_g_dl") or 7.0
+
+    smq040 = _num(row, "smq040_smoke_now") or 3.0
+    huq071 = _num(row, "huq071_hospital") or 2.0
+    whq070 = _num(row, "whq070_tried_to_lose_weight") or 2.0
+    bpq080 = _num(row, "bpq080_high_cholesterol") or 2.0
+    diq050 = _num(row, "diq050_insulin") or 2.0
+    diq070 = _num(row, "diq070_diabetes_pills") or 2.0
+    mcq080 = _num(row, "mcq080_overweight_dx") or 2.0
+    mcq160b = _num(row, "mcq160b_heart_failure") or 2.0
+    mcq300c = _num(row, "mcq300c_family_diabetes") or 2.0
+    kiq005 = _num(row, "kiq005_urinary_leakage_freq") or 0.0
+    kiq042 = _num(row, "kiq042_leak_exertion") or 2.0
+    kiq044 = _num(row, "kiq044_urge_incontinence") or 2.0
+    ocq180 = _num(row, "ocq180_hours_worked_week") or 40.0
+    rhq131 = _num(row, "rhq131_ever_pregnant") or 2.0
+    rhq540 = _num(row, "rhq540_hormone_use") or 2.0
+    rhq060 = _num(row, "rhq060_age_last_period") or 0.0
+    rhq031 = _num(row, "rhq031_regular_periods") or 2.0
+    pregnant_now = _num(row, "rhd143_pregnant_now")
+    preg_code = _num(row, "pregnancy_status_code")
+
+    current_smoker = 1.0 if smoking_raw == "current" else 2.0
+    smoked_100 = 1.0 if smoking_raw in {"current", "former"} else 2.0
+    cigs_day = 10.0 if smoking_raw == "current" else 0.0
+    ever_drank = _num(row, "ALQ110") or (1.0 if (_num(row, "alq130_avg_drinks_per_day") or 0.0) > 0 else 2.0)
+    heavy_daily_cutoff = 4.0 if sex_f else 5.0
+    heavy_daily = 1.0 if (_num(row, "alq130_avg_drinks_per_day") or 0.0) >= heavy_daily_cutoff else 2.0
+    education_code = _num(row, "education_code")
+    education_ord = {1.0: 0.0, 2.0: 1.0, 3.0: 2.0, 4.0: 3.0, 5.0: 4.0}.get(education_code, 2.0)
+    pregnancy_status_bin = 1.0 if (preg_code == 1.0 or pregnant_now == 1.0) else 0.0
+    pain = 2.0
+    saw_dr_for_pain = 1.0 if pain == 1.0 else 2.0
+    kiq430 = 2.0 if kiq042 == 1.0 else 0.0
+    kiq450 = 2.0 if kiq044 == 1.0 else 0.0
+    kiq010 = 1.0 if kiq005 > 0 else 0.0
+    kiq052 = 1.0 if kiq005 > 0 else 0.0
+    rhq160 = 2.0 if rhq131 == 1.0 else 0.0
+    smq078 = 3.0 if smoking_raw == "current" else 0.0
+    paq620 = 1.0 if ocq180 >= 20 else 2.0
+    paq650 = 1.0 if activity == "high" else 2.0
+    paq665 = 1.0 if activity in {"moderate", "high"} else 2.0
+    work_schedule = _num(row, "ocq670_work_schedule") or 1.0
+    ever_hepatitis_c = 1.0 if (_num(row, "hepatitis_bc") or 0.0) >= 0.5 else 2.0
+    ever_kidney_stones = _num(row, "kiq026_kidney_stones") or 2.0
+    ever_heart_attack = _num(row, "mcq160e_heart_attack") or 2.0
+    ever_stroke = _num(row, "mcq160f_stroke") or 2.0
+    mcq195 = 2.0 if (_num(row, "mcq160a_arthritis") or 2.0) == 1.0 else 3.0
+
+    out = {
         # ── Demographics ──────────────────────────────────────────────────────
         "age_years":         _num(row, "age_years") or 45.0,
         "gender":            2.0 if sex_f else 1.0,
@@ -295,18 +351,15 @@ def _nhanes_inputs(row: pd.Series, activity: str, smoking_raw: str) -> dict[str,
         "weight_kg":         round(bmi * (1.68 ** 2), 1),
         "waist_cm":          round(max(65.0, min(140.0, 75.0 + (bmi - 23.0) * 2.5)), 1),
         "activity_level":    activity,
-        "smq040_smoke_now":  _num(row, "smq040_smoke_now") or 3.0,
+        "smq040_smoke_now":  smq040,
 
         # ── PHQ-9 (real or condition-aware imputed) ───────────────────────────
         "dpq040_fatigue":        phq["dpq040_fatigue"],
-        "dpq010_anhedonia":      phq["dpq010_anhedonia"],
-        "dpq020_depressed":      phq["dpq020_depressed"],
         "dpq030_sleep":          phq["dpq030_sleep"],
         "dpq070_concentration":  phq["dpq070_concentration"],
 
         # ── Sleep questionnaire (real or condition-aware imputed) ─────────────
         "slq030_snore_freq":           slq["slq030_snore_freq"],
-        "slq040_stop_breathing_freq":  slq["slq040_stop_breathing_freq"],
         "slq050_sleep_trouble_doctor": slq["slq050_sleep_trouble_doctor"],
         "sld012_sleep_hours_weekday":  slq["sld012_sleep_hours_weekday"],
         "sld013_sleep_hours_weekend":  slq["sld013_sleep_hours_weekend"],
@@ -341,9 +394,9 @@ def _nhanes_inputs(row: pd.Series, activity: str, smoking_raw: str) -> dict[str,
         "mcq520_abdominal_pain":      2.0,   # [default: not measured in this cycle]
         # Reproductive (females only)
         "rhq031_regular_periods":     _num(row, "rhq031_regular_periods") or 2.0,
-        "rhq060_age_last_period":     _num(row, "rhq060_age_last_period") or 0.0,
-        "rhq131_ever_pregnant":       _num(row, "rhq131_ever_pregnant") or 2.0,
-        "rhq540_hormone_use":         _num(row, "rhq540_hormone_use") or 2.0,
+        "rhq060_age_last_period":     rhq060,
+        "rhq131_ever_pregnant":       rhq131,
+        "rhq540_hormone_use":         rhq540,
         # BP (measured)
         "sbp_mean":  sbp,
         "dbp_mean":  dbp,
@@ -357,39 +410,23 @@ def _nhanes_inputs(row: pd.Series, activity: str, smoking_raw: str) -> dict[str,
         # All other clinical chemistry values (ferritin, HbA1c, creatinine, CRP,
         # liver enzymes, electrolytes, vitamin D, vitamin B12, etc.) are NOT
         # provided and must be set to null — the model cannot see them.
-        # The NHANES 2003-2006 processed CSV also does not contain lipids, fasting
-        # glucose, or urine dipstick as numeric values, so those are null too.
+        # The NHANES 2003-2006 processed CSV contains a subset of these user-visible
+        # labs (lipids, LDL, fasting glucose, UACR, WBC, total protein). Thread
+        # those real values through when present for this SEQN.
+        # Urine dipstick fields are still unavailable in NHANES here and remain null.
         # Ground-truth labels (anemia, iron_deficiency, etc.) were derived from the
         # raw NHANES lab files during preprocessing — those derivations are kept as
         # ground truth but the raw values are intentionally withheld here.
-        "total_cholesterol_mg_dl":    None,   # not in NHANES 2003-2006 CSV
-        "ldl_mg_dl":                  None,   # not in NHANES 2003-2006 CSV
-        "hdl_mg_dl":                  None,   # not in NHANES 2003-2006 CSV
-        "triglycerides_mg_dl":        None,   # not in NHANES 2003-2006 CSV
-        "fasting_glucose_mg_dl":      None,   # not in NHANES 2003-2006 CSV
-        "urine_protein":              None,   # not in NHANES 2003-2006 CSV
-        "urine_glucose":              None,   # not in NHANES 2003-2006 CSV
-        "urine_rbc":                  None,   # not in NHANES 2003-2006 CSV
-        "urine_wbc":                  None,   # not in NHANES 2003-2006 CSV
-        "urine_nitrite":              None,   # not in NHANES 2003-2006 CSV
-        # Clinical labs NOT available from user report — withheld intentionally
-        "ferritin_ng_ml":             None,
-        "hemoglobin_g_dl":            None,
-        "hba1c_pct":                  None,
-        "serum_creatinine_mg_dl":     None,
-        "crp_mg_l":                   None,
-        "alt_u_l":                    None,
-        "ast_u_l":                    None,
-        "ggt_u_l":                    None,
-        "serum_albumin_g_dl":         None,
-        "wbc_1000_cells_ul":          None,
-        "total_protein_g_dl":         None,
-        "vitamin_d_25oh_nmol_l":      None,
-        "vitamin_b12_serum_pg_ml":    None,
-        "transferrin_saturation_pct": None,
-        "sodium_mmol_l":              None,
-        "potassium_mmol_l":           None,
-        "calcium_mg_dl":              None,
+        "total_cholesterol_mg_dl":    chol,
+        "ldl_mg_dl":                  ldl,
+        "ldl_cholesterol_mg_dl":      ldl,
+        "hdl_mg_dl":                  hdl,
+        "hdl_cholesterol_mg_dl":      hdl,
+        "triglycerides_mg_dl":        trig,
+        "fasting_glucose_mg_dl":      gluc,
+        "uacr_mg_g":                  uacr,
+        "wbc_1000_cells_ul":          wbc,
+        "total_protein_g_dl":         total_protein,
         # ── Condition flags (used by KNN scorer + Bayesian sampler) ───────────
         "thyroid":              _num(row, "thyroid") or 0.0,
         "kidney":               _num(row, "kidney") or 0.0,
@@ -403,15 +440,129 @@ def _nhanes_inputs(row: pd.Series, activity: str, smoking_raw: str) -> dict[str,
         "menopause":            _num(row, "menopause") or 0.0,
         "electrolyte_imbalance":_num(row, "electrolyte_imbalance") or 0.0,
         "perimenopause_proxy_probable": _num(row, "perimenopause_proxy_probable") or 0.0,
-        "ocq180_hours_worked_week": _num(row, "ocq180_hours_worked_week") or 40.0,
+        "ocq180_hours_worked_week": ocq180,
     }
 
+    out.update({
+        "general_health": out["huq010_general_health"],
+        "general_health_condition": out["huq010_general_health"],
+        "huq010___general_health_condition": out["huq010_general_health"],
+        "alq130___avg_#_alcoholic_drinks/day___past_12_mos": out["alq130_avg_drinks_per_day"],
+        "avg_drinks_per_day": out["alq130_avg_drinks_per_day"],
+        "cdq010___shortness_of_breath_on_stairs/inclines": out["cdq010_sob_stairs"],
+        "hdl": hdl,
+        "hdl_cholesterol": hdl,
+        "kiq480___how_many_times_urinate_in_night?": out["kiq480_nocturia"],
+        "times_urinate_in_night": out["kiq480_nocturia"],
+        "smoked_100_cigs": smoked_100,
+        "hospitalized_lastyear": huq071,
+        "huq071___overnight_hospital_patient_in_last_year": huq071,
+        "overnight_hospital": huq071,
+        "fasting_glucose": gluc,
+        "glucose": gluc,
+        "slq050_told_trouble_sleeping": out["slq050_sleep_trouble_doctor"],
+        "told_dr_trouble_sleeping": out["slq050_sleep_trouble_doctor"],
+        "trouble_sleeping": out["slq050_sleep_trouble_doctor"],
+        "dpq040___feeling_tired_or_having_little_energy": out["dpq040_fatigue"],
+        "dpq040_tired_little_energy": out["dpq040_fatigue"],
+        "feeling_tired_little_energy": out["dpq040_fatigue"],
+        "diq070___take_diabetic_pills_to_lower_blood_sugar": diq070,
+        "takes_diabetes_pills": diq070,
+        "taking_diabetic_pills": diq070,
+        "paq650___vigorous_recreational_activities": paq650,
+        "slq030___how_often_do_you_snore?": out["slq030_snore_freq"],
+        "ever_told_arthritis": out["mcq160a_arthritis"],
+        "mcq160a___ever_told_you_had_arthritis": out["mcq160a_arthritis"],
+        "avg_cigarettes_per_day": cigs_day,
+        "cigarettes_per_day": cigs_day,
+        "wbc": wbc,
+        "alq151___ever_have_4/5_or_more_drinks_every_day?": heavy_daily,
+        "ever_heavy_drinker_daily": heavy_daily,
+        "bpq030___told_had_high_blood_pressure___2+_times": out["bpq020_high_bp"],
+        "mcq010___ever_been_told_you_have_asthma": 2.0,
+        "mcq300c___close_relative_had_diabetes": mcq300c,
+        "education_ord": education_ord,
+        "triglycerides": trig,
+        "doctor_said_overweight": mcq080,
+        "mcq080___doctor_ever_said_you_were_overweight": mcq080,
+        "moderate_recreational": paq665,
+        "paq665___moderate_recreational_activities": paq665,
+        "ever_told_high_cholesterol": bpq080,
+        "told_high_cholesterol": bpq080,
+        "taking_anemia_treatment": out["mcq053_anemia_treatment"],
+        "blood_transfusion": out["mcq092_transfusion"],
+        "ever_had_blood_transfusion": out["mcq092_transfusion"],
+        "mcq092___ever_receive_blood_transfusion": out["mcq092_transfusion"],
+        "overall_work_schedule": work_schedule,
+        "work_schedule": work_schedule,
+        "ever_hepatitis_c": ever_hepatitis_c,
+        "paq620___moderate_work_activity": paq620,
+        "smoking_now": current_smoker,
+        "tried_to_lose_weight": whq070,
+        "pregnancy_status_bin": pregnancy_status_bin,
+        "cholesterol": chol,
+        "total_cholesterol": chol,
+        "SLD012": out["sld012_sleep_hours_weekday"],
+        "sld012___sleep_hours___weekdays_or_workdays": out["sld012_sleep_hours_weekday"],
+        "sleep_hours_weekday": out["sld012_sleep_hours_weekday"],
+        "sleep_hours_weekdays": out["sld012_sleep_hours_weekday"],
+        "bpq020___ever_told_you_had_high_blood_pressure": out["bpq020_high_bp"],
+        "ever_told_high_bp": out["bpq020_high_bp"],
+        "liver_condition": out["mcq160l_liver_condition"],
+        "sedentary_minutes": out["pad680_sedentary_minutes"],
+        "total_protein": total_protein,
+        "times_healthcare_past_year": 1.0 if huq071 == 1.0 else 0.0,
+        "kiq450___how_frequently_does_Urinated before reaching the toilet_occur?": kiq450,
+        "kiq450___how_frequently_does_this_occur?": kiq450,
+        "mcq195___which_type_of_arthritis_was_it?": mcq195,
+        "dr_said_reduce_fat": 1.0 if mcq080 == 1.0 else 2.0,
+        "abdominal_pain": pain,
+        "mcq520___abdominal_pain_during_past_12_months?": pain,
+        "hours_worked_per_week": ocq180,
+        "whq040___like_to_weigh_more,_less_or_same": out["whq040_weight_preference"],
+        "ldl_cholesterol": ldl,
+        "how_often_urinary_leakage": kiq005,
+        "kiq005___how_often_have_urinary_leakage?": kiq005,
+        "regular_periods": rhq031,
+        "rhq031___had_regular_periods_in_past_12_months": rhq031,
+        "sld013___sleep_hours___weekends": out["sld013_sleep_hours_weekend"],
+        "sleep_hours_weekend": out["sld013_sleep_hours_weekend"],
+        "kidney_disease": out["kiq022_weak_kidneys"],
+        "kiq022___ever_told_you_had_weak/failing_kidneys?": out["kiq022_weak_kidneys"],
+        "ever_had_kidney_stones": ever_kidney_stones,
+        "kiq026___ever_had_kidney_stones?": ever_kidney_stones,
+        "kiq044___urinated_before_reaching_the_toilet?": kiq044,
+        "urinated_before_toilet": kiq044,
+        "ever_told_heart_failure": mcq160b,
+        "heart_failure": mcq160b,
+        "rhq540_ever_hormones": rhq540,
+        "alq111___ever_had_a_drink_of_any_kind_of_alcohol": ever_drank,
+        "bpq050a___now_taking_prescribed_medicine_for_hbp": out["bpq040a_bp_meds"],
+        "taking_insulin": diq050,
+        "kiq010___how_much_urine_lose_each_time?": kiq010,
+        "kiq042___leak_urine_during_physical_activities?": kiq042,
+        "kiq052___how_much_were_daily_activities_affected?": kiq052,
+        "kiq430___how_frequently_does_Leak urine during physical activities_this_occur?": kiq430,
+        "kiq430___how_frequently_does_this_occur?": kiq430,
+        "ever_told_heart_attack": ever_heart_attack,
+        "rhq131___ever_been_pregnant?": rhq131,
+        "rhq160___how_many_times_have_been_pregnant?": rhq160,
+        "smq078___how_soon_after_waking_do_you_smoke": smq078,
+        "diabetes": out["diq010_diabetes"],
+        "ever_told_diabetes": out["diq010_diabetes"],
+        "ever_told_stroke": ever_stroke,
+        "mcq540___ever_seen_a_dr_about_this_pain": saw_dr_for_pain,
+        "saw_dr_for_pain": saw_dr_for_pain,
+    })
+
+    return out
 
 def build_profile(row: pd.Series, conditions: list[str]) -> dict[str, Any]:
     """Convert one CSV row + its condition list to the standard profile format."""
     activity    = derive_activity_level(row)
     raw_smoking = derive_smoking_status(row)
     smoking     = SMOKING_MAP.get(raw_smoking, "unknown")
+    seqn        = int(row["SEQN"]) if pd.notna(row.get("SEQN")) else 0
 
     # ── Compute nhanes_inputs first (includes condition-aware imputation) ────
     nhanes_in = _nhanes_inputs(row, activity, raw_smoking)
@@ -425,6 +576,15 @@ def build_profile(row: pd.Series, conditions: list[str]) -> dict[str, Any]:
     # Clinical labs (ferritin, HbA1c, etc.) stay as the real CSV values — they
     # feed the Bayesian latent-state computation at build time even though they are
     # withheld from nhanes_inputs for inference.
+    bridge_values = {
+        **_impute_phq(row, seqn),
+        **_impute_slq(
+            row,
+            seqn,
+            _num(row, "bmi") or 27.0,
+            str(row.get("gender", "")).lower() in ("female", "f"),
+        ),
+    }
     _QUIZ_BRIDGE_KEYS = (
         "dpq040_fatigue", "dpq010_anhedonia", "dpq020_depressed",
         "dpq030_sleep", "dpq070_concentration",
@@ -433,14 +593,16 @@ def build_profile(row: pd.Series, conditions: list[str]) -> dict[str, Any]:
     )
     bayes_row = row.copy()
     for k in _QUIZ_BRIDGE_KEYS:
-        if pd.isna(bayes_row.get(k)) and nhanes_in.get(k) is not None:
-            bayes_row[k] = nhanes_in[k]
+        if pd.isna(bayes_row.get(k)):
+            if nhanes_in.get(k) is not None:
+                bayes_row[k] = nhanes_in[k]
+            elif k in bridge_values:
+                bayes_row[k] = bridge_values[k]
 
     _sv_for_bayes = symptom_vector_from_row(bayes_row)
     bayesian_answers = fill_bayesian_answers(bayes_row, _sv_for_bayes)
 
     cycle      = str(row.get("cycle", "?"))
-    seqn       = int(row["SEQN"]) if pd.notna(row.get("SEQN")) else 0
     profile_id = f"NHANES-{cycle}-{seqn:05d}"
 
     # ── Ground truth: always list ALL conditions present ──────────────────────
@@ -478,16 +640,16 @@ def build_profile(row: pd.Series, conditions: list[str]) -> dict[str, Any]:
         # lab_values: only what the user's Clinical Chemistry & Urinalysis report
         # actually provides. All other labs are null — they are not available.
         "lab_values": {
-            "total_cholesterol_mg_dl": None,   # lipid panel — not in NHANES CSV
-            "ldl_mg_dl":               None,
-            "hdl_mg_dl":               None,
-            "triglycerides_mg_dl":     None,
-            "fasting_glucose_mg_dl":   None,   # glucose — not in NHANES CSV
-            "urine_protein":           None,   # urine dipstick — not in NHANES CSV
-            "urine_glucose":           None,
-            "urine_rbc":               None,
-            "urine_wbc":               None,
-            "urine_nitrite":           None,
+            "total_cholesterol_mg_dl": nhanes_in["total_cholesterol_mg_dl"],
+            "ldl_mg_dl":               nhanes_in["ldl_mg_dl"],
+            "ldl_cholesterol_mg_dl":   nhanes_in["ldl_cholesterol_mg_dl"],
+            "hdl_mg_dl":               nhanes_in["hdl_mg_dl"],
+            "hdl_cholesterol_mg_dl":   nhanes_in["hdl_cholesterol_mg_dl"],
+            "triglycerides_mg_dl":     nhanes_in["triglycerides_mg_dl"],
+            "fasting_glucose_mg_dl":   nhanes_in["fasting_glucose_mg_dl"],
+            "uacr_mg_g":               nhanes_in["uacr_mg_g"],
+            "wbc_1000_cells_ul":       nhanes_in["wbc_1000_cells_ul"],
+            "total_protein_g_dl":      nhanes_in["total_protein_g_dl"],
         },
         "quiz_path": "hybrid",
         "bayesian_answers": bayesian_answers,
