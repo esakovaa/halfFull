@@ -1,0 +1,59 @@
+{
+  "model": "thyroid_lr_hardneg_v5.joblib",
+  "version": "v5",
+  "condition": "thyroid",
+  "algorithm": "LogisticRegression expanded healthy-FP hard-neg v5",
+  "data_source": "nhanes_merged_adults_final_normalized.csv",
+  "audit_sources": [
+    "evals/results/thyroid_healthy_fp_audit_20260331_072759.json",
+    "evals/results/thyroid_healthy_fp_audit_20260331_074232.json"
+  ],
+  "n_train": 8216,
+  "prevalence": 0.06212182331585317,
+  "features": [
+    "age_years",
+    "med_count",
+    "huq010___general_health_condition",
+    "huq051___#times_receive_healthcare_over_past_year",
+    "dpq040___feeling_tired_or_having_little_energy",
+    "slq050___ever_told_doctor_had_trouble_sleeping?",
+    "sld012___sleep_hours___weekdays_or_workdays",
+    "mcq080___doctor_ever_said_you_were_overweight",
+    "whq070___tried_to_lose_weight_in_past_year",
+    "whq040___like_to_weigh_more,_less_or_same",
+    "weight_kg",
+    "pulse_1",
+    "total_cholesterol_mg_dl",
+    "hdl_cholesterol_mg_dl",
+    "alq130___avg_#_alcoholic_drinks/day___past_12_mos",
+    "kiq480___how_many_times_urinate_in_night?",
+    "thyroid_metabolic_bundle",
+    "thyroid_sleep_override",
+    "thyroid_weight_pattern",
+    "male_chronic_illness_bundle",
+    "thyroid_specific_anchor"
+  ],
+  "n_features": 21,
+  "cv_folds": 5,
+  "cv_auc_mean": 0.7598699819308152,
+  "cv_auc_std": 0.020515489372235362,
+  "cv_avg_precision": 0.1513270276594588,
+  "pipeline_gate": 0.35,
+  "pipeline_gate_rationale": "Global routing gate: scores above 0.35 escalate to next pipeline step",
+  "recommended_threshold": 0.75,
+  "recommended_threshold_criterion": "Chosen to keep the current strict thyroid surface threshold while training directly against audited healthy false positives.",
+  "train_recall_at_recommended_threshold": 0.27056277056277056,
+  "train_precision_at_recommended_threshold": 0.19054878048780488,
+  "hard_negative_leak_at_recommended_threshold": 0.014120667522464698,
+  "pipeline_steps": [
+    "SimpleImputer(strategy=median, add_indicator=True)",
+    "LogisticRegression(L2, class_weight=balanced, C=0.45)"
+  ],
+  "changes_from_v4": [
+    "Expanded hard negatives to include both the gated-v2 residual healthy FPs and the seven healthy FPs reintroduced by v4",
+    "Moved back closer to the validated v2 feature shape",
+    "Restored pulse as a thyroid-shaped anchor",
+    "Reduced reliance on the broader v4 feature expansion"
+  ],
+  "created_at": "2026-03-31T07:53:03.137914+00:00"
+}

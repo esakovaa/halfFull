@@ -849,6 +849,9 @@ def _score_profile(
         }
         patient_context["raw_bmi"] = raw_inputs.get("bmi")
         patient_context["raw_fasting_glucose"] = raw_inputs.get("fasting_glucose_mg_dl")
+        patient_context["raw_general_health"] = raw_inputs.get("huq010___general_health_condition")
+        patient_context["raw_med_count"] = raw_inputs.get("med_count")
+        patient_context["raw_sleep_trouble"] = raw_inputs.get("slq050___ever_told_doctor_had_trouble_sleeping?")
         norm = runner._get_normalizer()
         feature_vectors = norm.build_feature_vectors(raw_inputs)
         scores = runner.run_all_with_context(

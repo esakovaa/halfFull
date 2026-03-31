@@ -1,0 +1,51 @@
+{
+  "model": "thyroid_lr_hardneg_v3.joblib",
+  "version": "v3",
+  "condition": "thyroid",
+  "algorithm": "LogisticRegression hard-neg v3",
+  "data_source": "nhanes_merged_adults_final_normalized.csv",
+  "n_train": 8047,
+  "prevalence": 0.06212182331585317,
+  "features": [
+    "age_years",
+    "med_count",
+    "huq010___general_health_condition",
+    "dpq040___feeling_tired_or_having_little_energy",
+    "slq050___ever_told_doctor_had_trouble_sleeping?",
+    "sld012___sleep_hours___weekdays_or_workdays",
+    "mcq080___doctor_ever_said_you_were_overweight",
+    "whq070___tried_to_lose_weight_in_past_year",
+    "whq040___like_to_weigh_more,_less_or_same",
+    "bmi",
+    "weight_kg",
+    "pulse_1",
+    "total_cholesterol_mg_dl",
+    "alq130___avg_#_alcoholic_drinks/day___past_12_mos",
+    "kiq480___how_many_times_urinate_in_night?",
+    "thyroid_metabolic_bundle",
+    "thyroid_sleep_override",
+    "thyroid_weight_pattern"
+  ],
+  "n_features": 18,
+  "cv_folds": 5,
+  "cv_auc_mean": 0.774229451289623,
+  "cv_auc_std": 0.01884021050282911,
+  "cv_avg_precision": 0.16653722648710229,
+  "pipeline_gate": 0.35,
+  "pipeline_gate_rationale": "Global routing gate: scores above 0.35 escalate to next pipeline step",
+  "recommended_threshold": 0.72,
+  "recommended_threshold_criterion": "Chosen for better recall/flag balance after hard-negative retraining; intended to replace the blunt 0.75 cleanup threshold.",
+  "train_recall_at_recommended_threshold": 0.3463203463203463,
+  "train_precision_at_recommended_threshold": 0.18845700824499412,
+  "hard_negative_leak_at_recommended_threshold": 0.0,
+  "pipeline_steps": [
+    "SimpleImputer(strategy=median, add_indicator=True)",
+    "LogisticRegression(L2, class_weight=balanced, C=0.7)"
+  ],
+  "changes_from_v2": [
+    "Expanded features to include sleep hours, BMI, pulse, cholesterol, and weight-pattern fields",
+    "Added thyroid_metabolic_bundle, thyroid_sleep_override, thyroid_weight_pattern",
+    "Added hard negatives from sleep, anemia, and stress/fatigue lookalikes"
+  ],
+  "created_at": "2026-03-31T00:31:13.302468+00:00"
+}
