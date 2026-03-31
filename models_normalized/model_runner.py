@@ -986,6 +986,22 @@ class ModelRunner:
         malnutrition.  When GI urgency symptoms are absent (kiq044 ≠ 1), BMI is
         in a healthy range (> 18), and the user reports no vigorous recreational
         activity (paq650 ≠ 1), the risk profile is low.  Downweight ×0.3.
+
+        Hepatitis gates
+        ---------------
+        The hepatitis artifact was trained without direct self-reported hepatitis
+        diagnosis fields to avoid leakage, so in production it can under-rank
+        genuine hepatitis-positive profiles that explicitly report hepatitis C
+        history while over-scoring broad liver-burden lookalikes. Two narrow
+        runtime rules restore that missing routing signal:
+
+        1. If hepatitis C history is explicitly present (heq030 / ever_hepatitis_c
+           raw code 1.0), raise borderline hepatitis scores to a small floor
+           (0.12) so they can surface for follow-up.
+        2. If hepatitis history is explicitly absent (raw code 2.0) but liver
+           condition history is present, downweight borderline hepatitis scores
+           (< 0.25) by ×0.4. This targets the liver-heavy false positives seen
+           in the 760-cohort audit without suppressing high-confidence cases.
         """
         scores = dict(scores)  # shallow copy — do not mutate caller's dict
         ctx = patient_context or {}
@@ -1142,6 +1158,35 @@ class ModelRunner:
                     kiq044, elec_score, elec_score, scores["electrolyte_imbalance"],
                 )
 
+        # ── Hepatitis gates ─────────────────────────────────────────────────────
+        if "hepatitis_bc" in scores:
+            original = scores["hepatitis_bc"]
+            try:
+                raw_hep_history = float(ctx.get("raw_hepatitis_c_history")) if ctx.get("raw_hepatitis_c_history") is not None else None
+            except (TypeError, ValueError):
+                raw_hep_history = None
+            try:
+                raw_liver_history = float(ctx.get("raw_liver_condition_history")) if ctx.get("raw_liver_condition_history") is not None else None
+            except (TypeError, ValueError):
+                raw_liver_history = None
+
+            if raw_hep_history == 1.0 and original < 0.12:
+                scores["hepatitis_bc"] = 0.12
+                log.debug(
+                    "hepatitis history floor applied (heq030=1): %.4f → %.4f",
+                    original, scores["hepatitis_bc"],
+                )
+            elif (
+                raw_hep_history == 2.0
+                and raw_liver_history == 1.0
+                and original < 0.70
+            ):
+                scores["hepatitis_bc"] = round(original * 0.25, 4)
+                log.debug(
+                    "hepatitis liver-lookalike gate applied (heq030=2, liver_history=1): %.4f → %.4f",
+                    original, scores["hepatitis_bc"],
+                )
+
         return scores
 
     def run_all(self, feature_vectors: dict[str, pd.DataFrame]) -> dict[str, float]:
@@ -1263,6 +1308,8 @@ class ModelRunner:
         patient_context["raw_general_health"] = raw_inputs.get("huq010___general_health_condition")
         patient_context["raw_med_count"] = raw_inputs.get("med_count")
         patient_context["raw_sleep_trouble"] = raw_inputs.get("slq050___ever_told_doctor_had_trouble_sleeping?")
+        patient_context["raw_hepatitis_c_history"] = raw_inputs.get("heq030___ever_told_you_have_hepatitis_c?")
+        patient_context["raw_liver_condition_history"] = raw_inputs.get("mcq160l___ever_told_you_had_any_liver_condition")
 
         feature_vectors = self._get_normalizer().build_feature_vectors(raw_inputs)
         scores          = self.run_all_with_context(feature_vectors, patient_context)

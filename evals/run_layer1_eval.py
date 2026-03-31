@@ -871,6 +871,8 @@ def _score_profile(
         patient_context["raw_general_health"] = raw_inputs.get("huq010___general_health_condition")
         patient_context["raw_med_count"] = raw_inputs.get("med_count")
         patient_context["raw_sleep_trouble"] = raw_inputs.get("slq050___ever_told_doctor_had_trouble_sleeping?")
+        patient_context["raw_hepatitis_c_history"] = raw_inputs.get("heq030___ever_told_you_have_hepatitis_c?")
+        patient_context["raw_liver_condition_history"] = raw_inputs.get("mcq160l___ever_told_you_had_any_liver_condition")
         norm = runner._get_normalizer()
         feature_vectors = norm.build_feature_vectors(raw_inputs)
         scores = runner.run_all_with_context(
