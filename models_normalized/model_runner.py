@@ -123,10 +123,13 @@ MODEL_REGISTRY_AUDIT: dict[str, dict[str, str]] = {
         "basis": "No newer validated candidate artifact found locally.",
     },
     "thyroid": {
-        "artifact": "thyroid_lr_l2_reduced-12feat_v2.joblib",
-        "status": "retained",
+        "artifact": "thyroid_lr_hardneg_v5.joblib",
+        "status": "promoted",
         "decision_date": "2026-03-31",
-        "basis": "No newer validated candidate artifact found locally.",
+        "ticket": "ML-THYROID-04",
+        "basis": "Promoted after 760-cohort validation matched gated v2 recall and healthy thyroid FP rate while improving thyroid precision, lowering thyroid flag rate, and slightly improving top-1.",
+        "candidate_held": "thyroid_lr_hardneg_v4.joblib",
+        "eval_report": "evals/reports/layer1_20260331_075321.md",
     },
     "hidden_inflammation": {
         "artifact": "hidden_inflammation_lr_deduped26_L2_v3.joblib",
@@ -208,8 +211,11 @@ RECOMMENDED_THRESHOLDS = {
 #   0.40  anemia                — v6 symptom-bundle model: lower than v5's 0.60
 #                                  to recover recall while still staying far below
 #                                  the old spammy alert burden
-#   0.35  prediabetes / thyroid — reversible / manageable; weakest models in group;
+#   0.35  prediabetes          — reversible / manageable; weak model in group;
 #                                  need reasonable confidence before surfacing
+#   0.35  thyroid              — reversible / manageable; weak and still noisy
+#                                  in runtime, so keep a stricter product threshold
+#                                  even though the internal recommendation is lower
 #   0.40  electrolyte_imbalance / perimenopause
 #                               — weakest model (EI AUC 0.717) or high cohort base
 #                                  rate (perimenopause 23%) → need clearer signal
@@ -227,7 +233,7 @@ USER_FACING_THRESHOLDS = {
     "anemia":                0.40,   # v6 symptom-bundle model promoted 2026-03-31 to recover recall after bias fix; local 760 tests held healthy FP at 2%
     "hidden_inflammation":   0.40,   # raised 0.30→0.40 on 2026-03-26 quick-win sweep: precision 6.3%→8.2%, flag 55.3%→36.5%, recall 46.7%→40.0%
     "prediabetes":           0.45,   # raised 0.40→0.45 on 2026-03-27 second-pass tightening: high-recall yellow model still over-flagged
-    "thyroid":               0.75,   # raised 0.60→0.75 on 2026-03-27: eval shows 5/12 healthy FP suppressed; tradeoff is 7/58 TP lost (85%→75% recall) — model produces 0.85-0.95 saturated scores that cannot be separated by threshold alone; proper fix is ML-02 recalibration
+    "thyroid":               0.75,   # retained legacy strict cleanup after ML-THYROID-02 v3 validation failed to beat v2 cleanly on the 760 cohort
     "electrolyte_imbalance": 0.46,   # raised 0.40→0.46: flag 54%→34%, recall 40%→15%
     "perimenopause":         0.40,
     "sleep_disorder":        0.75,   # raised 0.70→0.75 on 2026-03-26 optional cleanup: precision 10.9%→13.1%, flag 24.5%→16.5%, recall 25.0%→20.3%
@@ -588,6 +594,60 @@ class InputNormalizer:
         out["fatigue_sob_combo"] = ((fat >= 1) & (sob <= 2)).astype(float)
         out["female_repro_signal"] = ((reg_periods == 1) | (preg_now == 1)).astype(float)
 
+        # thyroid-specific bundles: reward a more hypothyroid-shaped metabolic
+        # pattern while making the sleep-heavy lookalike pattern explicit.
+        sleep_trouble = out.get(
+            "slq050___ever_told_doctor_had_trouble_sleeping?",
+            pd.Series(2.0, index=out.index),
+        ).fillna(2)
+        sleep_hours = out.get(
+            "sld012___sleep_hours___weekdays_or_workdays",
+            pd.Series(0.0, index=out.index),
+        ).fillna(0)
+        overweight = out.get(
+            "mcq080___doctor_ever_said_you_were_overweight",
+            pd.Series(2.0, index=out.index),
+        ).fillna(2)
+        tried_weight_loss = out.get(
+            "whq070___tried_to_lose_weight_in_past_year",
+            pd.Series(2.0, index=out.index),
+        ).fillna(2)
+        bmi = out.get("bmi", pd.Series(0.0, index=out.index)).fillna(0)
+        pulse_1 = out.get("pulse_1", pd.Series(0.0, index=out.index)).fillna(0)
+        chol = out.get(
+            "total_cholesterol_mg_dl",
+            pd.Series(0.0, index=out.index),
+        ).fillna(0)
+        nocturia = out.get(
+            "kiq480___how_many_times_urinate_in_night?",
+            pd.Series(0.0, index=out.index),
+        ).fillna(0)
+
+        out["thyroid_metabolic_bundle"] = (
+            (fat >= 1).astype(float)
+            + (health >= 3).astype(float)
+            + (bmi > 0.15).astype(float)
+            + (chol > 0.15).astype(float)
+            + (pulse_1 < -0.05).astype(float)
+        )
+        out["thyroid_sleep_override"] = (
+            (sleep_trouble == 1).astype(float)
+            + (sleep_hours < -0.25).astype(float)
+            + (tried_weight_loss == 1).astype(float)
+            + (nocturia > 0.20).astype(float)
+        )
+        out["thyroid_weight_pattern"] = (
+            (overweight == 1).astype(float)
+            + (tried_weight_loss == 2).astype(float)
+            + (bmi > 0.15).astype(float)
+        )
+        out["male_chronic_illness_bundle"] = (
+            (out["gender_female"].fillna(0) < 0.5).astype(float)
+            + (health >= 3).astype(float)
+            + (out.get("med_count", pd.Series(0.0, index=out.index)).fillna(0) >= 3).astype(float)
+            + (sleep_trouble == 2).astype(float)
+        )
+
         return out
 
     def _apply_sentinels(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -875,12 +935,27 @@ class ModelRunner:
         with diabetes, risk is very low even when non-specific symptoms overlap
         with other conditions.  Downweight ×0.3.
 
-        Thyroid gate
-        ------------
-        Thyroid disorders are uncommon before age 25 and typically present with
-        fatigue as a cardinal symptom.  Young users (age < 25) without meaningful
-        fatigue (dpq040 < 2 on the PHQ-4 energy item, scored 0–3) are very
-        unlikely to have a clinically significant thyroid disorder.  Downweight ×0.4.
+        Thyroid gates
+        -------------
+        Two targeted cleanup rules are used for thyroid:
+
+        1. Young users (age < 25) without meaningful fatigue (dpq040 < 2 on the
+           PHQ-4 energy item, scored 0–3) are unlikely to have clinically
+           significant thyroid disease.  Downweight ×0.4.
+
+        2. Sleep-heavy fatigue lookalikes can still score highly after the
+           retrained model when they have broad symptom burden but lack a more
+           thyroid-shaped metabolic pattern.  For borderline scores (< 0.85),
+           if sleep trouble is present and the derived sleep-overlap bundle is
+           stronger than the metabolic bundle, downweight ×0.55.
+
+        3. Healthy-user audit on 2026-03-31 showed a second narrow false-
+           positive cluster: older male users with poor general health and
+           polypharmacy, but without active sleep-trouble history. These users
+           can inherit a broad "older, sicker" thyroid score despite weak
+           thyroid-specific evidence. For borderline thyroid scores (< 0.90),
+           if male AND age >= 65 AND general health >= 3 AND med_count >= 3
+           AND no sleep trouble, downweight ×0.6.
 
         Electrolyte gate
         ----------------
@@ -978,6 +1053,55 @@ class ModelRunner:
                 log.debug(
                     "thyroid gate applied (age=%.0f, dpq040=%.1f): %.4f → %.4f",
                     age, dpq040, original, scores["thyroid"],
+                )
+
+            metabolic = _fv("thyroid_metabolic_bundle")
+            sleepish = _fv("thyroid_sleep_override")
+            sleep_trouble = _fv("slq050___ever_told_doctor_had_trouble_sleeping?")
+            original = scores["thyroid"]
+            if (
+                original < 0.85
+                and sleep_trouble is not None
+                and sleep_trouble == 1.0
+                and sleepish is not None
+                and metabolic is not None
+                and sleepish >= 2.0
+                and metabolic <= 2.0
+            ):
+                scores["thyroid"] = round(original * 0.55, 4)
+                log.debug(
+                    "thyroid sleep-heavy cleanup gate applied (sleep=%.1f, sleepish=%.1f, metabolic=%.1f): %.4f → %.4f",
+                    sleep_trouble, sleepish, metabolic, original, scores["thyroid"],
+                )
+
+            gender = str(_gender_from_context(ctx) or "")
+            try:
+                general_health = float(ctx.get("raw_general_health")) if ctx.get("raw_general_health") is not None else None
+            except (TypeError, ValueError):
+                general_health = None
+            try:
+                med_count = float(ctx.get("raw_med_count")) if ctx.get("raw_med_count") is not None else None
+            except (TypeError, ValueError):
+                med_count = None
+            try:
+                raw_sleep_trouble = float(ctx.get("raw_sleep_trouble")) if ctx.get("raw_sleep_trouble") is not None else None
+            except (TypeError, ValueError):
+                raw_sleep_trouble = None
+            if (
+                gender == "Male"
+                and age >= 65.0
+                and original < 0.90
+                and general_health is not None
+                and general_health >= 3.0
+                and med_count is not None
+                and med_count >= 3.0
+                and raw_sleep_trouble is not None
+                and raw_sleep_trouble == 2.0
+            ):
+                scores["thyroid"] = round(original * 0.6, 4)
+                log.debug(
+                    "thyroid older-male polypharmacy gate applied (age=%.0f, health=%.1f, meds=%.1f): %.4f → %.4f",
+                    age, general_health, med_count, original, scores["thyroid"],
                 )
 
         # ── Electrolyte gate ────────────────────────────────────────────────────
@@ -1114,6 +1238,9 @@ class ModelRunner:
         )
         patient_context["raw_bmi"] = raw_inputs.get("bmi")
         patient_context["raw_fasting_glucose"] = raw_inputs.get("fasting_glucose_mg_dl")
+        patient_context["raw_general_health"] = raw_inputs.get("huq010___general_health_condition")
+        patient_context["raw_med_count"] = raw_inputs.get("med_count")
+        patient_context["raw_sleep_trouble"] = raw_inputs.get("slq050___ever_told_doctor_had_trouble_sleeping?")
 
         feature_vectors = self._get_normalizer().build_feature_vectors(raw_inputs)
         scores          = self.run_all_with_context(feature_vectors, patient_context)

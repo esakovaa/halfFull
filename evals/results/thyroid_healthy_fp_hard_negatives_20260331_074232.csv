@@ -1,0 +1,8 @@
+profile_id,thyroid_score,age_years,age_bucket,gender,fatigue,sleep_trouble,sleep_hours,general_health,med_count,overweight_history,tried_weight_loss,alcohol_per_day,pulse_1,total_cholesterol_mg_dl,combo_labels
+NHANES-C-21502,0.9719,84.0,65+,Male,0.8,2.0,6.4,4.0,7.0,2.0,,0.0,,179.0,older+polypharmacy
+NHANES-C-27455,0.8454,36.0,25-44,Male,0.6,2.0,7.3,3.0,7.0,2.0,,1.0,,221.0,
+NHANES-C-29195,0.8342,72.0,65+,Male,0.3,2.0,6.6,1.0,3.0,2.0,,6.0,,209.0,
+NHANES-C-27418,0.8335,85.0,65+,Male,0.5,2.0,6.6,3.0,1.0,2.0,,2.0,,147.0,
+NHANES-C-28207,0.7973,75.0,65+,Male,0.0,2.0,6.3,1.0,2.0,2.0,,0.0,,215.0,
+NHANES-C-30520,0.7713,63.0,45-64,Male,0.1,2.0,6.6,2.0,5.0,2.0,,1.0,,169.0,older+polypharmacy
+NHANES-C-28473,0.7529,76.0,65+,Male,0.4,2.0,6.8,3.0,1.0,2.0,,1.0,,207.0,
