@@ -9,6 +9,7 @@ import {
 import {
   buildAllClearPrompt,
   buildMedGemmaGroundingPromptV6,
+  buildGroqSynthesisFallbackPromptV7,
   buildGroqSynthesisPromptV7,
   MEDGEMMA_JSON_SYSTEM_V1,
 } from '@/src/lib/prompts';
@@ -25,7 +26,7 @@ import {
   type DeclinedSuspicion,
   type MedGemmaGroundingResult,
 } from '@/lib/medgemma-safety';
-import { synthesizeNarrativeWithGroqV6 } from '@/src/lib/server/deepAnalyzeSafety';
+import { rewriteDeepAnalyzeTone, synthesizeNarrativeWithGroqV6 } from '@/src/lib/server/deepAnalyzeSafety';
 import { selectOneShotExample } from '@/src/lib/oneShotExamples';
 import {
   buildHealthDataSummary,
@@ -145,6 +146,122 @@ function ensureCandidateCoverage(
   return [...(result.declinedSuspicions ?? []), ...appended];
 }
 
+function toTitleCaseSummaryPoint(text: string): string {
+  const trimmed = text.trim().replace(/[.;:,]+$/, '');
+  if (!trimmed) return '';
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
+const SUMMARY_POINT_FORBIDDEN = [
+  /\bthyroid\b/i,
+  /\banemi[ao]?\b/i,
+  /\bprediabet/i,
+  /\bglucose\b/i,
+  /\bhepatitis\b/i,
+  /\bliver\b/i,
+  /\bkidney\b/i,
+  /\biron deficiency\b/i,
+  /\biron\b/i,
+  /\bsleep disorder\b/i,
+  /\belectrolyte/i,
+  /\binflammation\b/i,
+  /\bcondition\b/i,
+  /\bdiagnos/i,
+  /\bsyndrome\b/i,
+  /\bdoctor\b/i,
+  /\bspecialist\b/i,
+  /\btest\b/i,
+  /\blab\b/i,
+  /\bmarker\b/i,
+  /\bfollow-?up\b/i,
+  /\brule out\b/i,
+  /\bworth discussing\b/i,
+  /\bmay be a concern\b/i,
+];
+
+function normalizeStructuredSummaryPoints(
+  existingPoints: string[] | undefined,
+  candidatePoints: string[],
+): string[] {
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+
+  const tryAdd = (value: string) => {
+    const cleaned = toTitleCaseSummaryPoint(value);
+    if (!cleaned) return;
+    if (SUMMARY_POINT_FORBIDDEN.some((pattern) => pattern.test(cleaned))) return;
+    const wordCount = cleaned.split(/\s+/).filter(Boolean).length;
+    if (wordCount < 2 || wordCount > 10) return;
+    const dedupeKey = cleaned.toLowerCase();
+    if (seen.has(dedupeKey)) return;
+    seen.add(dedupeKey);
+    normalized.push(cleaned);
+  };
+
+  for (const value of candidatePoints) {
+    if (normalized.length >= 3) break;
+    tryAdd(value);
+  }
+  for (const value of existingPoints ?? []) {
+    if (normalized.length >= 3) break;
+    tryAdd(value);
+  }
+
+  return normalized.slice(0, 3);
+}
+
+function annotateDeepAnalyzeResponse(
+  response: NextResponse,
+  metadata: {
+    groundingSource: string;
+    synthesisSource: string;
+    synthesisModel?: string;
+    synthesisStatus?: number;
+    synthesisErrorSnippet?: string;
+    rewriteSource?: string;
+    rewriteModel?: string;
+    rewriteStatus?: number;
+    rewriteErrorSnippet?: string;
+    hardSafetyCount: number;
+  },
+): NextResponse {
+  response.headers.set('x-deep-analyze-grounding-source', metadata.groundingSource);
+  response.headers.set('x-deep-analyze-synthesis-source', metadata.synthesisSource);
+  response.headers.set('x-deep-analyze-hard-safety-count', String(metadata.hardSafetyCount));
+  response.headers.set(
+    'x-deep-analyze-hard-safety-applied',
+    metadata.hardSafetyCount > 0 ? 'true' : 'false',
+  );
+  if (metadata.synthesisModel) {
+    response.headers.set('x-deep-analyze-synthesis-model', metadata.synthesisModel);
+  }
+  if (metadata.synthesisStatus !== undefined) {
+    response.headers.set('x-deep-analyze-synthesis-status', String(metadata.synthesisStatus));
+  }
+  if (metadata.synthesisErrorSnippet) {
+    response.headers.set(
+      'x-deep-analyze-synthesis-error-snippet',
+      encodeURIComponent(metadata.synthesisErrorSnippet),
+    );
+  }
+  if (metadata.rewriteSource) {
+    response.headers.set('x-deep-analyze-rewrite-source', metadata.rewriteSource);
+  }
+  if (metadata.rewriteModel) {
+    response.headers.set('x-deep-analyze-rewrite-model', metadata.rewriteModel);
+  }
+  if (metadata.rewriteStatus !== undefined) {
+    response.headers.set('x-deep-analyze-rewrite-status', String(metadata.rewriteStatus));
+  }
+  if (metadata.rewriteErrorSnippet) {
+    response.headers.set(
+      'x-deep-analyze-rewrite-error-snippet',
+      encodeURIComponent(metadata.rewriteErrorSnippet),
+    );
+  }
+  return response;
+}
+
 export async function POST(req: NextRequest) {
   const hfToken = process.env.HF_API_TOKEN;
   if (!hfToken || hfToken === 'hf_your_token_here') {
@@ -167,14 +284,14 @@ export async function POST(req: NextRequest) {
     if (!EVAL_MODE_SECRET) {
       return NextResponse.json(
         { error: 'medgemma_only eval mode is disabled on this deployment.' },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
     if (evalHeaderSecret !== EVAL_MODE_SECRET) {
       return NextResponse.json(
         { error: 'Invalid eval mode secret.' },
-        { status: 403 }
+        { status: 403 },
       );
     }
   }
@@ -220,18 +337,18 @@ export async function POST(req: NextRequest) {
 
   const scoreSummaryJson = evalMode === 'medgemma_only'
     ? JSON.stringify({
-      mode: 'medgemma_only',
-      note: 'ML scores intentionally withheld for quiz-only evaluation. Review the candidate conditions using questionnaire evidence only.',
-      candidateConditions: flaggedConditions,
-      confirmedConditions,
-    }, null, 2)
+        mode: 'medgemma_only',
+        note: 'ML scores intentionally withheld for quiz-only evaluation. Review the candidate conditions using questionnaire evidence only.',
+        candidateConditions: flaggedConditions,
+        confirmedConditions,
+      }, null, 2)
     : JSON.stringify({
-      threshold: ML_THRESHOLD,
-      topConditions,
-      allScores: mlScores ?? {},
-      filteredHighScoreConditions: flaggedConditions,
-      confirmedConditions,
-    }, null, 2);
+        threshold: ML_THRESHOLD,
+        topConditions,
+        allScores: mlScores ?? {},
+        filteredHighScoreConditions: flaggedConditions,
+        confirmedConditions,
+      }, null, 2);
 
   // [ADDED] Healthy user path: no scores or everything below 0.35
   const isAllClear =
@@ -315,10 +432,25 @@ export async function POST(req: NextRequest) {
     try {
       const allClearPrompt = buildAllClearPrompt({ symptomsText, answeredQuestionsText, uploadedLabsText });
       const allClearResult = await synthesizeNarrativeWithGroqV6(allClearPrompt);
-      if (!allClearResult) {
-        return NextResponse.json({ error: 'Groq synthesis unavailable for all-clear path' }, { status: 503 });
+      if (!allClearResult.data) {
+        return annotateDeepAnalyzeResponse(
+          NextResponse.json({ error: 'LLM synthesis unavailable for all-clear path' }, { status: 503 }),
+          {
+            groundingSource: 'all_clear_skip_medgemma',
+            synthesisSource: allClearResult.synthesisSource,
+            synthesisModel: allClearResult.model,
+            synthesisStatus: allClearResult.status,
+            synthesisErrorSnippet: allClearResult.errorSnippet,
+            hardSafetyCount: 0,
+          },
+        );
       }
-      const { data: safeData, warnings } = applyHardSafetyRules(allClearResult);
+      const normalizedAllClear = {
+        ...allClearResult.data,
+        summaryPoints: normalizeStructuredSummaryPoints(allClearResult.data.summaryPoints, []),
+      };
+      const rewriteResult = await rewriteDeepAnalyzeTone(normalizedAllClear);
+      const { data: safeData, warnings } = applyHardSafetyRules(rewriteResult.data);
       if (warnings.length > 0) {
         await writeLog('deep_analyze_safety_replacements', {
           anonymousId: privacy?.anonymousId ?? null,
@@ -354,7 +486,21 @@ export async function POST(req: NextRequest) {
         allClear: true,
         result: safeData,
       });
-      return NextResponse.json(safeData);
+      return annotateDeepAnalyzeResponse(
+        NextResponse.json(safeData),
+        {
+          groundingSource: 'all_clear_skip_medgemma',
+          synthesisSource: allClearResult.synthesisSource,
+          synthesisModel: allClearResult.model,
+          synthesisStatus: allClearResult.status,
+          synthesisErrorSnippet: allClearResult.errorSnippet,
+          rewriteSource: rewriteResult.rewriteSource,
+          rewriteModel: rewriteResult.model,
+          rewriteStatus: rewriteResult.status,
+          rewriteErrorSnippet: rewriteResult.errorSnippet,
+          hardSafetyCount: warnings.length,
+        },
+      );
     } catch (err) {
       await writeLog('deep_analyze_error', {
         anonymousId: privacy?.anonymousId ?? null,
@@ -388,6 +534,14 @@ export async function POST(req: NextRequest) {
     medicationFlags: [],
     recommendedSpecialties: [],
   };
+  let groundingSource =
+    'fallback_empty_grounding' as
+      | 'live_medgemma_success'
+      | 'fallback_medgemma_http_error'
+      | 'fallback_medgemma_schema_error'
+      | 'fallback_medgemma_parse_failed'
+      | 'fallback_medgemma_exception'
+      | 'fallback_empty_grounding';
 
   try {
     const controller = new AbortController();
@@ -419,6 +573,7 @@ export async function POST(req: NextRequest) {
         answers,
         flaggedConditions,
       });
+      groundingSource = 'fallback_medgemma_http_error';
       // Proceed with empty grounding — Groq synthesis still runs
     } else {
       const hfData = await hfResponse.json();
@@ -439,16 +594,24 @@ export async function POST(req: NextRequest) {
       const jsonMatch = rawContent.match(/\{[\s\S]*/);
       if (jsonMatch) {
         const parsed = repairAndParseJson(jsonMatch[0]);
-        const validation = validateMedGemmaGroundingSchema(parsed);
-        if (validation.ok) {
-          groundingResult = validation.data;
+        if (!parsed) {
+          groundingSource = 'fallback_medgemma_parse_failed';
         } else {
-          await writeLog('medgemma_grounding_schema_error', {
-            anonymousId: privacy?.anonymousId ?? null,
-            reason: validation.reason,
-            raw: rawContent,
-          });
+          const validation = validateMedGemmaGroundingSchema(parsed);
+          if (validation.ok) {
+            groundingSource = 'live_medgemma_success';
+            groundingResult = validation.data;
+          } else {
+            groundingSource = 'fallback_medgemma_schema_error';
+            await writeLog('medgemma_grounding_schema_error', {
+              anonymousId: privacy?.anonymousId ?? null,
+              reason: validation.reason,
+              raw: rawContent,
+            });
+          }
         }
+      } else {
+        groundingSource = 'fallback_medgemma_parse_failed';
       }
     }
   } catch (err) {
@@ -458,6 +621,7 @@ export async function POST(req: NextRequest) {
       mlScores: mlScores ?? {},
       error: String(err),
     });
+    groundingSource = 'fallback_medgemma_exception';
     // Continue with empty grounding — Groq synthesis still runs
   }
 
@@ -491,10 +655,27 @@ export async function POST(req: NextRequest) {
       oneShot: selectOneShotExample(groundingResult),
       topBayesianConditions,
     });
+    const fallbackSynthesisPrompt = buildGroqSynthesisFallbackPromptV7({
+      groundingResultJson: JSON.stringify(groundingResult, null, 2),
+      overallUrgency,
+    });
 
-    const synthesisResult = await synthesizeNarrativeWithGroqV6(synthesisPrompt);
-    if (!synthesisResult) {
-      return NextResponse.json({ error: 'Groq synthesis unavailable' }, { status: 503 });
+    const synthesisResult = await synthesizeNarrativeWithGroqV6({
+      primaryPrompt: synthesisPrompt,
+      fallbackPrompt: fallbackSynthesisPrompt,
+    });
+    if (!synthesisResult.data) {
+      return annotateDeepAnalyzeResponse(
+        NextResponse.json({ error: 'LLM synthesis unavailable' }, { status: 503 }),
+        {
+          groundingSource,
+          synthesisSource: synthesisResult.synthesisSource,
+          synthesisModel: synthesisResult.model,
+          synthesisStatus: synthesisResult.status,
+          synthesisErrorSnippet: synthesisResult.errorSnippet,
+          hardSafetyCount: 0,
+        },
+      );
     }
 
     // ── Build deterministic personalizedSummary from top Bayesian confirming questions ──
@@ -561,7 +742,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    let personalizedSummary = synthesisResult.personalizedSummary;
+    let personalizedSummary = synthesisResult.data.personalizedSummary;
     if (topSymptoms.length >= 2) {
       const phrase =
         topSymptoms.length === 2
@@ -571,13 +752,32 @@ export async function POST(req: NextRequest) {
     }
     // If < 2 valid symptoms found, keep Groq's synthesised version unchanged
 
+    const summaryPointCandidates = [
+      ...topSymptoms,
+      ...groundingResult.supportedSuspicions.flatMap((s) => s.keySymptoms ?? []),
+      ...groundingResult.recommendedSpecialties.flatMap((s) => s.symptomsToRaise ?? []),
+    ];
+
     const coveredResult = {
-      ...synthesisResult,
+      ...synthesisResult.data,
+      summaryPoints: normalizeStructuredSummaryPoints(
+        synthesisResult.data.summaryPoints,
+        summaryPointCandidates,
+      ),
       personalizedSummary,
-      declinedSuspicions: ensureCandidateCoverage(flaggedConditions, synthesisResult),
+      declinedSuspicions: ensureCandidateCoverage(flaggedConditions, synthesisResult.data),
     };
 
-    const { data: safeData, warnings: safetyWarnings } = applyHardSafetyRules(coveredResult);
+    const rewriteResult = await rewriteDeepAnalyzeTone(coveredResult);
+    const allowedDiagnosisIds = Array.from(new Set([
+      ...topConditions.map(([conditionId]) => conditionId),
+      ...confirmedConditions,
+    ]));
+
+    const { data: safeData, warnings: safetyWarnings } = applyHardSafetyRules(
+      rewriteResult.data,
+      { allowedDiagnosisIds },
+    );
     if (safetyWarnings.length > 0) {
       await writeLog('deep_analyze_safety_replacements', {
         anonymousId: privacy?.anonymousId ?? null,
@@ -627,10 +827,24 @@ export async function POST(req: NextRequest) {
       overallUrgency,
     });
 
-    return NextResponse.json({
-      ...safeData,
-      ...(knnResult ? { knnSignals: knnResult } : {}),
-    });
+    return annotateDeepAnalyzeResponse(
+      NextResponse.json({
+        ...safeData,
+        ...(knnResult ? { knnSignals: knnResult } : {}),
+      }),
+      {
+        groundingSource,
+        synthesisSource: synthesisResult.synthesisSource,
+        synthesisModel: synthesisResult.model,
+        synthesisStatus: synthesisResult.status,
+        synthesisErrorSnippet: synthesisResult.errorSnippet,
+        rewriteSource: rewriteResult.rewriteSource,
+        rewriteModel: rewriteResult.model,
+        rewriteStatus: rewriteResult.status,
+        rewriteErrorSnippet: rewriteResult.errorSnippet,
+        hardSafetyCount: safetyWarnings.length,
+      },
+    );
   } catch (err) {
     await writeLog('deep_analyze_error', {
       anonymousId: privacy?.anonymousId ?? null,

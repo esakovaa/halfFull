@@ -35,6 +35,7 @@ PROJECT_ROOT = EVALS_DIR.parent
 RESULTS_DIR = EVALS_DIR / "results"
 REPORTS_DIR = EVALS_DIR / "reports"
 PROFILES_PATH = EVALS_DIR / "cohort" / "nhanes_balanced_760.json"
+QUIZ_SCHEMA_PATH = PROJECT_ROOT / "frontend" / "src" / "data" / "quiz_nhanes_v2.json"
 
 sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(EVALS_DIR))
@@ -74,6 +75,79 @@ ABSENT_NEIGHBOUR_MAP: dict[str, list[str]] = {
     "inflammation": ["hepatitis", "liver", "anemia"],
     "electrolyte_imbalance": ["kidney_disease", "prediabetes"],
     "vitamin_d_deficiency": ["sleep_disorder", "inflammation"],
+}
+
+FOLLOW_UP_GROUP = "Follow-up"
+
+BAYESIAN_QUESTION_TEXT: dict[str, str] = {
+    "anemia_q1": "Have you had heavier bleeding than usual recently?",
+    "anemia_q2": "Have you noticed any bleeding from your stomach or bowels?",
+    "anemia_q3": "Have you been feeling dizzy or lightheaded?",
+    "anemia_q4": "Do you often feel unusually cold?",
+    "anemia_q5": "How long has the fatigue been going on?",
+    "iron_q1": "Have you had heavier bleeding recently?",
+    "iron_q2": "Do you avoid iron-rich foods most of the time?",
+    "iron_q3": "Have you had stomach or bowel symptoms that could cause blood loss?",
+    "iron_q4": "Do you get restless or uncomfortable legs, especially at night?",
+    "iron_q5": "Have you had cravings for ice, starch, or other non-food items?",
+    "thyroid_q1": "Have you noticed a change in your weight recently?",
+    "thyroid_q2": "Have your bowel movements become slower or more constipated?",
+    "thyroid_q3": "Have you noticed dry skin or hair changes?",
+    "thyroid_q4": "Have you noticed swelling or fullness in the front of your neck?",
+    "thyroid_q5": "How long have these symptoms been present?",
+    "kidney_q1": "Have you noticed swelling in your legs, ankles, or around your eyes?",
+    "kidney_q2": "Have you noticed foamy or bubbly urine?",
+    "kidney_q3": "Have you been urinating less than usual?",
+    "kidney_q4": "Have you ever been told you may have a kidney problem?",
+    "sleep_q1": "Do you snore loudly or often?",
+    "sleep_q2": "Has anyone noticed pauses in your breathing during sleep?",
+    "sleep_q3": "Do you wake feeling unrefreshed?",
+    "sleep_q4": "Do you struggle to fall asleep or stay asleep?",
+    "sleep_q5": "Do you feel sleepy during the day?",
+    "liver_q1": "How much alcohol do you usually drink?",
+    "liver_q2": "Have you noticed yellowing of the eyes or skin?",
+    "liver_q3": "Have you had nausea or discomfort in the upper abdomen?",
+    "liver_q4": "Have you started any new medicines or supplements recently?",
+    "liver_q5": "Have you noticed dark urine or pale stools?",
+    "prediabetes_q1": "Do close relatives have diabetes?",
+    "prediabetes_q2": "Have you been thirstier than usual or urinating more often?",
+    "prediabetes_q3": "Have you noticed blurry vision or slower healing?",
+    "prediabetes_q4": "How active are you on most weeks?",
+    "inflam_q1": "Have you had a recent infection or lingering illness?",
+    "inflam_q2": "Do you have joint pain or stiffness?",
+    "inflam_q3": "Have you noticed swollen glands, rashes, or other inflammatory symptoms?",
+    "inflam_q4": "How long have these symptoms been present?",
+    "elec_q1": "How much fluid loss, dehydration, or heavy sweating have you had recently?",
+    "elec_q2": "Have you had muscle cramps or spasms?",
+    "elec_q3": "Have you felt dizzy, weak, or faint?",
+    "elec_q4": "Have you had vomiting or diarrhea recently?",
+    "hep_q1": "Have you had any hepatitis risk exposures recently?",
+    "hep_q2": "Have you noticed yellowing of the skin or eyes?",
+    "hep_q3": "Have you had nausea, appetite loss, or abdominal discomfort?",
+    "hep_q4": "Have you had any new medication, supplement, or exposure concerns?",
+    "peri_q1": "Have your menstrual cycles become more irregular?",
+    "peri_q2": "Have you been having hot flashes?",
+    "peri_q2b": "Have you had night sweats?",
+    "peri_q2c": "Has sleep become worse or more disrupted lately?",
+    "peri_q3": "Have you noticed mood changes or irritability?",
+    "peri_q4": "Have you noticed vaginal dryness or discomfort?",
+    "peri_q5": "Have these changes been building over several months?",
+}
+
+BAYESIAN_ANSWER_LABELS: dict[str, str] = {
+    "yes": "Yes",
+    "no": "No",
+    "none": "None",
+    "low_none": "Little or none",
+    "mild": "Mild",
+    "moderate": "Moderate",
+    "high": "High",
+    "lt_4w": "Less than 4 weeks",
+    "4_12w": "4 to 12 weeks",
+    "gt_6m": "More than 6 months",
+    "gained": "Gained weight",
+    "lost": "Lost weight",
+    "stable": "Stayed about the same",
 }
 
 
@@ -130,7 +204,9 @@ def _load_layer1_module():
         jsonschema_stub.validate = lambda instance, schema: True  # type: ignore[attr-defined]
         sys.modules["jsonschema"] = jsonschema_stub
 
-    module_path = EVALS_DIR / "archive" / "run_layer1_eval.py"
+    module_path = EVALS_DIR / "run_layer1_eval.py"
+    if not module_path.exists():
+        module_path = EVALS_DIR / "archive" / "run_layer1_eval.py"
     spec = importlib.util.spec_from_file_location("evals_archive_run_layer1_eval", module_path)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"Could not load layer1 helper module from {module_path}")
@@ -144,7 +220,24 @@ ModelRunner = LAYER1.ModelRunner
 FILTER_CRITERIA = LAYER1.FILTER_CRITERIA
 CONDITION_TO_MODEL_KEY = dict(LAYER1.CONDITION_TO_MODEL_KEY)
 MODEL_KEY_TO_CONDITION = dict(LAYER1.MODEL_KEY_TO_CONDITION)
-BUILD_RAW_INPUTS_FROM_NHANES = LAYER1._build_raw_inputs_from_nhanes
+BUILD_RAW_INPUTS_FROM_NHANES = getattr(
+    LAYER1,
+    "_build_raw_inputs_from_nhanes",
+    getattr(LAYER1, "_build_raw_inputs"),
+)
+
+
+def load_quiz_question_ids(path: Path) -> set[str]:
+    quiz_schema = json.loads(path.read_text(encoding="utf-8"))
+    return {
+        question["id"]
+        for module in quiz_schema.get("assessment", {}).get("modules", [])
+        for question in module.get("questions", [])
+        if question.get("id")
+    }
+
+
+QUIZ_QUESTION_IDS = load_quiz_question_ids(QUIZ_SCHEMA_PATH)
 
 
 def load_profiles(path: Path) -> list[dict[str, Any]]:
@@ -197,12 +290,55 @@ def sample_profiles(profiles: list[dict[str, Any]], config: EvalConfig) -> list[
 
 
 def build_quiz_answers(profile: dict[str, Any]) -> dict[str, Any]:
-    answers = BUILD_RAW_INPUTS_FROM_NHANES(profile)
-    return {key: value for key, value in answers.items() if value is not None}
+    quiz_answers = profile.get("nhanes_inputs", {})
+    return {
+        key: value
+        for key, value in quiz_answers.items()
+        if key in QUIZ_QUESTION_IDS and value is not None
+    }
+
+
+def humanize_bayesian_answer(value: Any) -> str:
+    if isinstance(value, list):
+        return ", ".join(humanize_bayesian_answer(item) for item in value)
+    key = str(value)
+    return BAYESIAN_ANSWER_LABELS.get(key, key.replace("_", " "))
+
+
+def build_bayesian_follow_up(profile: dict[str, Any]) -> list[dict[str, str]]:
+    answers = profile.get("bayesian_answers", {})
+    follow_up: list[dict[str, str]] = []
+    for question_id, raw_value in answers.items():
+        if raw_value in (None, "", []):
+            continue
+        question_text = BAYESIAN_QUESTION_TEXT.get(question_id)
+        if not question_text:
+            continue
+        follow_up.append(
+            {
+                "group": FOLLOW_UP_GROUP,
+                "question": question_text,
+                "answer": humanize_bayesian_answer(raw_value),
+            }
+        )
+    return follow_up
+
+
+def _with_safe_demo_defaults(profile: dict[str, Any]) -> dict[str, Any]:
+    patched = dict(profile)
+    demographics = dict(profile.get("demographics", {}))
+    nhanes_inputs = profile.get("nhanes_inputs", {})
+
+    if demographics.get("bmi") is None:
+        fallback_bmi = nhanes_inputs.get("bmi")
+        demographics["bmi"] = fallback_bmi if fallback_bmi is not None else 28.0
+
+    patched["demographics"] = demographics
+    return patched
 
 
 def compute_model_scores(profile: dict[str, Any], runner: Any) -> dict[str, float]:
-    raw_inputs = BUILD_RAW_INPUTS_FROM_NHANES(profile)
+    raw_inputs = BUILD_RAW_INPUTS_FROM_NHANES(_with_safe_demo_defaults(profile))
     patient_context = {
         "gender": "Female" if float(raw_inputs.get("gender", 2.0)) == 2.0 else "Male",
         "age_years": raw_inputs.get("age_years"),
@@ -305,6 +441,17 @@ def build_hybrid_payload(profile: dict[str, Any], scores_top5: dict[str, float])
         "clarificationQA": [],
         "confirmedConditions": [],
         "useKNN": False,
+    }
+
+
+def build_medgemma_plus_bayesian_payload(profile: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "answers": build_quiz_answers(profile),
+        "clarificationQA": build_bayesian_follow_up(profile),
+        "confirmedConditions": [],
+        "useKNN": False,
+        "evalMode": "medgemma_only",
+        "evalCandidateConditions": EVAL_CONDITIONS_12,
     }
 
 
@@ -493,7 +640,7 @@ def build_markdown(run_id: str, config: EvalConfig, sample_profiles_list: list[d
     lines.append("")
     lines.append("| Arm | Recall@3 | Healthy over-alert | Mean absent FP | Mean neighbour FP | Parse success |")
     lines.append("|-----|-----------|--------------------|----------------|-------------------|---------------|")
-    for arm_name in ("models_only", "medgemma_only", "hybrid_top5"):
+    for arm_name in ("models_only", "medgemma_only", "medgemma_plus_bayesian", "hybrid_top5"):
         arm = summary["arms"][arm_name]
         lines.append(
             f"| {arm_name} | {arm['recall_at_3']:.1%} | {arm['healthy_over_alert_rate']:.1%} | "
@@ -503,16 +650,17 @@ def build_markdown(run_id: str, config: EvalConfig, sample_profiles_list: list[d
     lines.append("")
     lines.append("## Per-Condition Recommendation")
     lines.append("")
-    lines.append("| Condition | Models recall@3 | MedGemma recall@3 | Hybrid recall@3 | Hybrid neighbour FP | Recommendation |")
-    lines.append("|-----------|------------------|-------------------|-----------------|---------------------|----------------|")
+    lines.append("| Condition | Models recall@3 | MedGemma quiz-only | MedGemma + follow-up | Hybrid recall@3 | Hybrid neighbour FP | Recommendation |")
+    lines.append("|-----------|------------------|--------------------|----------------------|-----------------|---------------------|----------------|")
     for condition_id in EVAL_CONDITIONS_12:
         model_recall = summary["arms"]["models_only"]["per_condition"][condition_id]["recall_at_3"] or 0.0
         med_recall = summary["arms"]["medgemma_only"]["per_condition"][condition_id]["recall_at_3"] or 0.0
+        med_follow_up_recall = summary["arms"]["medgemma_plus_bayesian"]["per_condition"][condition_id]["recall_at_3"] or 0.0
         hybrid_stats = summary["arms"]["hybrid_top5"]["per_condition"][condition_id]
         hybrid_recall = hybrid_stats["recall_at_3"] or 0.0
         recommendation = summary["recommendations"][condition_id]["recommendation"]
         lines.append(
-            f"| {condition_id} | {model_recall:.1%} | {med_recall:.1%} | {hybrid_recall:.1%} | "
+            f"| {condition_id} | {model_recall:.1%} | {med_recall:.1%} | {med_follow_up_recall:.1%} | {hybrid_recall:.1%} | "
             f"{hybrid_stats['neighbour_false_positive_rate']:.1%} | {recommendation} |"
         )
     lines.append("")
@@ -526,6 +674,7 @@ def build_markdown(run_id: str, config: EvalConfig, sample_profiles_list: list[d
     lines.append("## Notes")
     lines.append("")
     lines.append("- `MedGemma-only` uses the live `/api/deep-analyze` path with quiz answers only and an eval-specific prompt mode that withholds ML scores.")
+    lines.append("- `MedGemma + follow-up` uses the same eval mode but also sends human-readable Bayesian follow-up Q/A without LR values or condition labels.")
     lines.append("- On protected preview deployments, pass `--eval-secret` so the runner can access the guarded `medgemma_only` route.")
     lines.append("- `Hybrid` passes only the top-5 model scores to the same route.")
     lines.append("- `healthy over-alert` counts any surfaced diagnosis on healthy profiles.")
@@ -545,6 +694,7 @@ def main() -> int:
     arm_records: dict[str, list[dict[str, Any]]] = {
         "models_only": [],
         "medgemma_only": [],
+        "medgemma_plus_bayesian": [],
         "hybrid_top5": [],
     }
 
@@ -561,6 +711,12 @@ def main() -> int:
         med_record = dict(base)
         med_record.update(evaluate_deep_analyze_arm(profile, build_medgemma_only_payload(profile), config))
         arm_records["medgemma_only"].append(med_record)
+
+        med_follow_up_record = dict(base)
+        med_follow_up_record.update(
+            evaluate_deep_analyze_arm(profile, build_medgemma_plus_bayesian_payload(profile), config)
+        )
+        arm_records["medgemma_plus_bayesian"].append(med_follow_up_record)
 
         hybrid_record = dict(base)
         hybrid_record.update(evaluate_deep_analyze_arm(profile, build_hybrid_payload(profile, top5_scores(model_scores)), config))

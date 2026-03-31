@@ -13,26 +13,22 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const rewriteResult = await rewriteDeepAnalyzeTone(inputValidation.data);
-  const safetyResult = applyHardSafetyRules(rewriteResult.data);
-  const response = NextResponse.json(safetyResult.data);
-  response.headers.set('x-safety-rewrite-source', rewriteResult.rewriteSource);
-  if (rewriteResult.groqStatus !== undefined) {
-    response.headers.set('x-safety-groq-status', String(rewriteResult.groqStatus));
+  const rewritten = await rewriteDeepAnalyzeTone(inputValidation.data);
+  const { data: safeData, warnings } = applyHardSafetyRules(rewritten.data);
+  const response = NextResponse.json(safeData);
+  response.headers.set('x-safety-rewrite-source', rewritten.rewriteSource);
+  response.headers.set('x-safety-hard-rules-applied', warnings.length > 0 ? 'true' : 'false');
+  response.headers.set('x-safety-hard-rule-count', String(warnings.length));
+  if (rewritten.model) {
+    response.headers.set('x-safety-rewrite-model', rewritten.model);
   }
-  if (rewriteResult.groqErrorSnippet) {
-    response.headers.set(
-      'x-safety-groq-error-snippet',
-      encodeURIComponent(rewriteResult.groqErrorSnippet),
-    );
+  if (rewritten.status !== undefined) {
+    response.headers.set('x-safety-rewrite-status', String(rewritten.status));
+    response.headers.set('x-safety-groq-status', String(rewritten.status));
   }
-  response.headers.set(
-    'x-safety-hard-rules-applied',
-    safetyResult.warnings.length > 0 ? 'true' : 'false',
-  );
-  response.headers.set(
-    'x-safety-hard-rule-count',
-    String(safetyResult.warnings.length),
-  );
+  if (rewritten.errorSnippet) {
+    response.headers.set('x-safety-rewrite-error-snippet', encodeURIComponent(rewritten.errorSnippet));
+    response.headers.set('x-safety-groq-error-snippet', encodeURIComponent(rewritten.errorSnippet));
+  }
   return response;
 }
