@@ -362,7 +362,7 @@ export default function ClarifyPage() {
       <main className="flex-1 overflow-y-auto px-5 py-6">
         <div className="mx-auto flex max-w-lg flex-col gap-5">
           <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--color-ink)]">
-            <span>HalfFull</span>
+            <span style={{ fontFamily: 'Archivo, sans-serif', letterSpacing: '-0.02em', textTransform: 'none', fontSize: 16, lineHeight: 1 }}><span style={{ fontWeight: 400, color: 'var(--color-ink-soft)' }}>half</span><span style={{ fontWeight: 900, color: 'var(--color-ink)' }}>Full</span></span>
             <span className="text-[var(--color-ink-soft)]">
               Clarify {currentScreenIndex + 1}/{conditionQs.length}
             </span>

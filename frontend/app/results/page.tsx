@@ -388,7 +388,7 @@ const effectiveSummaryLine = mlRanButEmpty
       {/* Sticky header */}
       <header className="sticky top-0 z-10 border-b border-white/30 bg-[rgba(184,194,228,0.82)] px-5 pt-6 pb-4 backdrop-blur-sm">
         <div className="mx-auto flex max-w-lg items-center justify-between">
-          <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--color-ink)]">HalfFull</span>
+          <span style={{ fontFamily: 'Archivo, sans-serif', letterSpacing: '-0.02em', textTransform: 'none', fontSize: 16, lineHeight: 1 }}><span style={{ fontWeight: 400, color: 'var(--color-ink-soft)' }}>half</span><span style={{ fontWeight: 900, color: 'var(--color-ink)' }}>Full</span></span>
           <div className="flex items-center gap-3">
             <Link
               href="/assessment"

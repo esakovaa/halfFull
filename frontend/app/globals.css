@@ -43,6 +43,7 @@ a {
   font-family: var(--font-display);
   font-weight: 900;
   letter-spacing: -0.06em;
+  word-spacing: 0.1em;
 }
 
 .card-title {
