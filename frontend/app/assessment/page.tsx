@@ -75,7 +75,7 @@ export default function AssessmentPage() {
       <header className="px-5 pt-6 pb-5">
         <div className="mx-auto max-w-lg">
           <div className="mb-5 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--color-ink)]">
-            <span>HalfFull</span>
+            <span style={{ fontFamily: 'Archivo, sans-serif', letterSpacing: '-0.02em', textTransform: 'none', fontSize: 16, lineHeight: 1 }}><span style={{ fontWeight: 400, color: 'var(--color-ink-soft)' }}>half</span><span style={{ fontWeight: 900, color: 'var(--color-ink)' }}>Full</span></span>
             <div className="flex items-center gap-3">
               <ExitAssessmentButton
                 className="text-[var(--color-ink-soft)]"

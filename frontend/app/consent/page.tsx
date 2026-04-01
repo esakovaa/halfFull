@@ -61,7 +61,7 @@ export default function ConsentPage() {
       <main className="flex-1 px-5 py-6">
         <div className="mx-auto flex max-w-lg flex-col gap-4">
           <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--color-ink)]">
-            <span>HalfFull</span>
+            <span style={{ fontFamily: 'Archivo, sans-serif', letterSpacing: '-0.02em', textTransform: 'none', fontSize: 16, lineHeight: 1 }}><span style={{ fontWeight: 400, color: 'var(--color-ink-soft)' }}>half</span><span style={{ fontWeight: 900, color: 'var(--color-ink)' }}>Full</span></span>
             <Link href="/start" className="text-[var(--color-ink-soft)]">Back</Link>
           </div>
 
