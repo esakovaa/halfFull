@@ -2,12 +2,11 @@
 
 import { useState } from 'react';
 import type { BayesianConditionTrace } from '@/src/lib/medgemma';
-import type { Diagnosis, SignalStrength } from '@/src/lib/mockResults';
+import type { Diagnosis } from '@/src/lib/mockResults';
 import type { ConfidenceTier, UrgencyLevel } from '@/src/lib/clinicalSignals';
 
 interface Props {
   diagnosis: Diagnosis;
-  rank: number;
   personalNote?: string;
   confidence?: {
     tier: ConfidenceTier;
@@ -25,44 +24,20 @@ interface Props {
   };
 }
 
-const SIGNAL_CONFIG: Record<
-  SignalStrength,
-  { label: string; dotColor: string; pillBg: string; pillText: string }
-> = {
-  strong: {
-    label: 'Strong signal',
-    dotColor: 'bg-[var(--color-accent)]',
-    pillBg: 'bg-[var(--color-accent-soft)]',
-    pillText: 'text-[var(--color-ink)]',
-  },
-  moderate: {
-    label: 'Moderate signal',
-    dotColor: 'bg-[var(--color-lime)]',
-    pillBg: 'bg-[rgba(215,240,104,0.3)]',
-    pillText: 'text-[var(--color-ink)]',
-  },
-  investigating: {
-    label: 'Worth investigating',
-    dotColor: 'bg-[#9ea9d3]',
-    pillBg: 'bg-[rgba(158,169,211,0.25)]',
-    pillText: 'text-[var(--color-ink)]',
-  },
-};
-
 const CONFIDENCE_CONFIG: Record<ConfidenceTier, { label: string; bg: string; text: string }> = {
   high: {
     label: 'High confidence',
-    bg: 'bg-[rgba(119,101,244,0.12)]',
+    bg: 'bg-[#d7f06859]',
     text: 'text-[var(--color-ink)]',
   },
   medium: {
     label: 'Medium confidence',
-    bg: 'bg-[rgba(215,240,104,0.35)]',
+    bg: 'bg-[#d7f06859]',
     text: 'text-[var(--color-ink)]',
   },
   low: {
     label: 'Low confidence',
-    bg: 'bg-[rgba(158,169,211,0.25)]',
+    bg: 'bg-[#d7f06859]',
     text: 'text-[var(--color-ink)]',
   },
 };
@@ -70,21 +45,21 @@ const CONFIDENCE_CONFIG: Record<ConfidenceTier, { label: string; bg: string; tex
 const URGENCY_CONFIG: Record<UrgencyLevel, { label: string; bg: string; text: string; border: string }> = {
   urgent: {
     label: 'Urgent',
-    bg: 'bg-[rgba(214,72,72,0.12)]',
-    text: 'text-[#8f2222]',
-    border: 'border-[rgba(214,72,72,0.22)]',
+    bg: 'bg-[#efb9732e]',
+    text: 'text-[var(--color-ink)]',
+    border: 'border-[#efb9732e]',
   },
   soon: {
     label: 'Soon',
-    bg: 'bg-[rgba(239,185,115,0.18)]',
-    text: 'text-[#8a5a13]',
-    border: 'border-[rgba(239,185,115,0.22)]',
+    bg: 'bg-[#efb9732e]',
+    text: 'text-[var(--color-ink)]',
+    border: 'border-[#efb9732e]',
   },
   routine: {
     label: 'Routine',
-    bg: 'bg-[rgba(151,166,210,0.18)]',
-    text: 'text-[var(--color-ink-soft)]',
-    border: 'border-[rgba(151,166,210,0.18)]',
+    bg: 'bg-[#efb9732e]',
+    text: 'text-[var(--color-ink)]',
+    border: 'border-[#efb9732e]',
   },
 };
 
@@ -150,9 +125,8 @@ function ReasoningTrace({
   );
 }
 
-export function DiagnosisCard({ diagnosis, rank, personalNote, confidence, urgency, reasoningTrace }: Props) {
+export function DiagnosisCard({ diagnosis, personalNote, confidence, urgency, reasoningTrace }: Props) {
   const [open, setOpen] = useState(false);
-  const cfg = SIGNAL_CONFIG[diagnosis.signal];
   const confidenceCfg = confidence ? CONFIDENCE_CONFIG[confidence.tier] : null;
   const urgencyCfg = urgency ? URGENCY_CONFIG[urgency.level] : null;
 
@@ -167,19 +141,13 @@ export function DiagnosisCard({ diagnosis, rank, personalNote, confidence, urgen
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center gap-4 bg-[var(--color-card)] px-5 py-4 text-left transition-colors"
       >
-        <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#09090f] text-xs font-bold text-white">
-          {rank}
-        </span>
+        <span className="text-[2rem] leading-none flex-shrink-0">{diagnosis.emoji}</span>
 
-        <span className="text-2xl flex-shrink-0">{diagnosis.emoji}</span>
-
-        <div className="flex-1 min-w-0">
-          <p className="text-base font-bold leading-snug tracking-[-0.03em] text-[var(--color-ink)]">{diagnosis.title}</p>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cfg.dotColor}`} />
-            <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${cfg.pillBg} ${cfg.pillText}`}>
-              {cfg.label}
-            </span>
+        <div className="min-w-0 flex-1">
+          <p className="card-title text-[1.15rem] font-black leading-snug tracking-[-0.03em] text-[var(--color-ink)]">
+            {diagnosis.title}
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
             {confidenceCfg && (
               <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${confidenceCfg.bg} ${confidenceCfg.text}`}>
                 {confidenceCfg.label}
@@ -205,7 +173,7 @@ export function DiagnosisCard({ diagnosis, rank, personalNote, confidence, urgen
       </button>
 
       {open && (
-        <div className="flex flex-col gap-5 border-t border-[rgba(151,166,210,0.18)] bg-[var(--color-card)] px-5 pb-5 pt-1">
+        <div className="flex flex-col gap-10 border-t border-[rgba(151,166,210,0.18)] bg-[var(--color-card)] px-5 pb-6 pt-4">
           {personalNote && (
             <div className="flex gap-2.5 rounded-2xl border border-[rgba(119,101,244,0.12)] bg-[var(--color-accent-soft)] px-4 py-3">
               <span className="text-base flex-shrink-0">✨</span>
@@ -218,7 +186,7 @@ export function DiagnosisCard({ diagnosis, rank, personalNote, confidence, urgen
           {(confidence || urgency) && (
             <div className="grid gap-3 md:grid-cols-2">
               {confidence && (
-                <div className="rounded-2xl border border-[rgba(151,166,210,0.18)] bg-white p-4">
+                <div className="rounded-2xl border border-[#d7f06859] bg-[#d7f06859] p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-ink-soft)]">
                     Confidence
                   </p>
