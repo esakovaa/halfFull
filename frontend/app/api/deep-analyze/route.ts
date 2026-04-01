@@ -24,6 +24,7 @@ import {
   applyHardSafetyRules,
   validateMedGemmaGroundingSchema,
   type DeclinedSuspicion,
+  type DeepAnalyzeResult,
   type MedGemmaGroundingResult,
 } from '@/lib/medgemma-safety';
 import { rewriteDeepAnalyzeTone, synthesizeNarrativeWithGroqV6 } from '@/src/lib/server/deepAnalyzeSafety';
@@ -289,6 +290,87 @@ function annotateDeepAnalyzeResponse(
     );
   }
   return response;
+}
+
+function buildDeterministicFallbackFromGrounding(args: {
+  groundingResult: MedGemmaGroundingResult;
+  overallUrgency: UrgencyLevel;
+}): DeepAnalyzeResult {
+  const { groundingResult, overallUrgency } = args;
+  const supported = groundingResult.supportedSuspicions.slice(0, 3);
+  const declined = groundingResult.declinedSuspicions.slice(0, 6);
+  const topSymptoms = Array.from(
+    new Set(
+      supported.flatMap((item) => item.keySymptoms).filter(Boolean),
+    ),
+  ).slice(0, 3);
+
+  const summaryPoints = topSymptoms.length > 0
+    ? topSymptoms.map((item) => toTitleCaseSummaryPoint(item)).filter(Boolean).slice(0, 3)
+    : ['Persistent fatigue pattern'];
+
+  const personalizedSummary = topSymptoms.length >= 2
+    ? `From what you shared, your fatigue seems to overlap with ${topSymptoms[0].toLowerCase()} and ${topSymptoms[1].toLowerCase()}. Below you can see some hypotheses on the root causes and which doctors to see first, and how to prepare for your visit.`
+    : topSymptoms.length == 1
+      ? `From what you shared, your fatigue seems to overlap with ${topSymptoms[0].toLowerCase()}. Below you can see some hypotheses on the root causes and which doctors to see first, and how to prepare for your visit.`
+      : 'From what you shared, there are a few patterns worth following up rather than treating this as generic tiredness. Below you can see some hypotheses on the root causes and which doctors to see first, and how to prepare for your visit.';
+
+  const insights = supported.map((item) => ({
+    diagnosisId: item.diagnosisId,
+    confidence: item.confidence,
+    personalNote: item.reasoning?.trim() || item.anchorEvidence?.trim() || 'This pattern may be worth discussing with a doctor.',
+  }));
+
+  const recommendedDoctors = groundingResult.recommendedSpecialties.length > 0
+    ? groundingResult.recommendedSpecialties.slice(0, 3).map((specialty) => ({
+      specialty: specialty.specialty,
+      priority: specialty.priority,
+      reason: specialty.clinicalReason,
+      symptomsToDiscuss: specialty.symptomsToRaise.slice(0, 5),
+      suggestedTests: specialty.testsToRequest.slice(0, 6),
+    }))
+    : supported.length > 0
+      ? [{
+        specialty: 'GP',
+        priority: 'start_here',
+        reason: 'A GP can review these findings, order initial tests, and decide whether a specialist referral is needed.',
+        symptomsToDiscuss: topSymptoms.slice(0, 5),
+        suggestedTests: Array.from(new Set(supported.flatMap((item) => item.recommendedTests))).slice(0, 6),
+      }]
+      : [];
+
+  const doctorKits = recommendedDoctors.map((doctor) => ({
+    specialty: doctor.specialty,
+    openingSummary: `I'd like to review my fatigue and the patterns that may be contributing to it, especially ${doctor.symptomsToDiscuss.slice(0, 2).join(' and ') || 'the symptoms I reported'}.`,
+    concerningSymptoms: doctor.symptomsToDiscuss.slice(0, 6),
+    recommendedTests: doctor.suggestedTests.slice(0, 6),
+    discussionPoints: doctor.reason ? [doctor.reason] : [],
+    bringToAppointment: ['List of symptoms', 'Medication list', 'Any prior test results'],
+    whatToSay: `I've been dealing with fatigue and I want to understand which causes are most worth checking first.`,
+  }));
+
+  const nextSteps = recommendedDoctors.length > 0
+    ? overallUrgency === 'urgent'
+      ? `Arrange prompt medical review, starting with ${recommendedDoctors[0].specialty}. Ask about the targeted tests linked to these findings.`
+      : overallUrgency === 'soon'
+        ? `Book a near-term visit, starting with ${recommendedDoctors[0].specialty}. Ask about the targeted tests linked to these findings.`
+        : `Start with ${recommendedDoctors[0].specialty} and ask about the targeted tests linked to these findings.`
+    : 'If these symptoms continue or worsen, discuss them with a doctor and ask which focused tests would help clarify the cause.';
+
+  return {
+    personalizedSummary,
+    summaryPoints,
+    insights,
+    ...(declined.length > 0 ? { declinedSuspicions: declined } : {}),
+    recoveryOutlook: 'Clarity often improves once the most plausible causes are checked first. Some of these patterns are treatable once confirmed.',
+    nextSteps,
+    doctorKitSummary: 'I want to explain the fatigue patterns I have noticed and make sure we check the most relevant causes first.',
+    doctorKitQuestions: [],
+    doctorKitArguments: [],
+    recommendedDoctors,
+    doctorKits,
+    ...(supported.length === 0 ? { allClear: true } : {}),
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -738,16 +820,43 @@ export async function POST(req: NextRequest) {
       fallbackPrompt: fallbackSynthesisPrompt,
     });
     if (!synthesisResult.data) {
+      const deterministicFallback = buildDeterministicFallbackFromGrounding({
+        groundingResult,
+        overallUrgency,
+      });
+      const rewriteResult = await rewriteDeepAnalyzeTone(deterministicFallback);
+      const allowedDiagnosisIds = Array.from(new Set([
+        ...topConditions.map(([conditionId]) => conditionId),
+        ...confirmedConditions,
+        ...groundingResult.supportedSuspicions.map((item) => item.diagnosisId),
+        ...groundingResult.declinedSuspicions.map((item) => item.diagnosisId),
+      ]));
+      const { data: safeFallbackData, warnings: fallbackWarnings } = applyHardSafetyRules(
+        rewriteResult.data,
+        { allowedDiagnosisIds },
+      );
+      const cleanupCount = fallbackWarnings.filter((warning) => warning.includes('Removed unsupported')).length;
+      if (fallbackWarnings.length > 0) {
+        await writeLog('deep_analyze_safety_replacements', {
+          anonymousId: privacy?.anonymousId ?? null,
+          warnings: fallbackWarnings,
+        });
+      }
+
       return annotateDeepAnalyzeResponse(
-        NextResponse.json({ error: 'LLM synthesis unavailable' }, { status: 503 }),
+        NextResponse.json(safeFallbackData),
         {
           groundingSource,
-          synthesisSource: synthesisResult.synthesisSource,
+          synthesisSource: `${synthesisResult.synthesisSource}_deterministic_fallback`,
           synthesisModel: synthesisResult.model,
           synthesisStatus: synthesisResult.status,
           synthesisErrorSnippet: synthesisResult.errorSnippet,
-          hardSafetyCount: 0,
-          cleanupCount: 0,
+          rewriteSource: rewriteResult.rewriteSource,
+          rewriteModel: rewriteResult.model,
+          rewriteStatus: rewriteResult.status,
+          rewriteErrorSnippet: rewriteResult.errorSnippet,
+          hardSafetyCount: fallbackWarnings.length,
+          cleanupCount,
         },
       );
     }
